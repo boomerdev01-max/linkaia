@@ -10,9 +10,11 @@ import { deleteAllPostMedia } from "@/lib/supabase/post-media-storage";
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }, // ← correction ici
 ) {
   try {
+    const { id } = await params; // ← await + destructuring OBLIGATOIRE
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user: supabaseUser },
@@ -21,7 +23,7 @@ export async function DELETE(
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -32,40 +34,37 @@ export async function DELETE(
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Vérifier que le post existe et appartient à l'utilisateur
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id }, // ← utilise id (awaité)
     });
 
     if (!post) {
       return NextResponse.json(
         { success: false, error: "Post non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (post.authorId !== user.id) {
       return NextResponse.json(
         { success: false, error: "Non autorisé" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    // Supprimer tous les médias du post sur Supabase Storage
     try {
       await deleteAllPostMedia(user.id, post.id);
     } catch (error) {
       console.error("❌ Error deleting post media:", error);
-      // Continue même si la suppression des médias échoue
+      // Continue même si échec
     }
 
-    // Supprimer le post (Cascade supprimera automatiquement médias, réactions, commentaires)
     await prisma.post.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({
@@ -76,7 +75,7 @@ export async function DELETE(
     console.error("❌ Error deleting post:", error);
     return NextResponse.json(
       { success: false, error: "Failed to delete post" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -84,16 +83,14 @@ export async function DELETE(
 /**
  * PUT /api/posts/[id]
  * Modifie le contenu texte d'un post (seulement par l'auteur)
- *
- * Body:
- * - content: string
- * - visibility: "public" | "friends" | "private" (optionnel)
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }, // ← correction ici
 ) {
   try {
+    const { id } = await params; // ← await obligatoire
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user: supabaseUser },
@@ -102,7 +99,7 @@ export async function PUT(
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -113,42 +110,38 @@ export async function PUT(
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Vérifier que le post existe et appartient à l'utilisateur
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!post) {
       return NextResponse.json(
         { success: false, error: "Post non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (post.authorId !== user.id) {
       return NextResponse.json(
         { success: false, error: "Non autorisé" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    // Parser le body
     const body = await request.json();
     const { content, visibility } = body;
 
-    // Valider que le contenu n'est pas vide
     if (!content || content.trim() === "") {
       return NextResponse.json(
         { success: false, error: "Le contenu ne peut pas être vide" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Mettre à jour le post
     const updateData: any = {
       content,
       editedAt: new Date(),
@@ -159,7 +152,7 @@ export async function PUT(
     }
 
     const updatedPost = await prisma.post.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         author: {
@@ -196,7 +189,7 @@ export async function PUT(
     console.error("❌ Error updating post:", error);
     return NextResponse.json(
       { success: false, error: "Failed to update post" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -207,9 +200,11 @@ export async function PUT(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }, // ← correction ici aussi !
 ) {
   try {
+    const { id } = await params; // ← await ici
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user: supabaseUser },
@@ -218,7 +213,7 @@ export async function GET(
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -229,13 +224,12 @@ export async function GET(
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Récupérer le post
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         author: {
           select: {
@@ -306,20 +300,19 @@ export async function GET(
     if (!post) {
       return NextResponse.json(
         { success: false, error: "Post non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Vérifier les permissions de visibilité
+    // Vérifier visibilité (le reste reste inchangé)
     if (post.visibility === "private" && post.authorId !== user.id) {
       return NextResponse.json(
         { success: false, error: "Non autorisé" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     if (post.visibility === "friends" && post.authorId !== user.id) {
-      // Vérifier si l'utilisateur est ami avec l'auteur
       const friendship = await prisma.friendship.findFirst({
         where: {
           OR: [
@@ -340,12 +333,11 @@ export async function GET(
       if (!friendship) {
         return NextResponse.json(
           { success: false, error: "Non autorisé" },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
 
-    // Enrichir avec la réaction de l'utilisateur
     const userReaction = post.reactions.find((r) => r.userId === user.id);
 
     const enrichedPost = {
@@ -356,10 +348,13 @@ export async function GET(
             type: userReaction.type,
           }
         : null,
-      reactionCounts: post.reactions.reduce((acc, r) => {
-        acc[r.type.code] = (acc[r.type.code] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+      reactionCounts: post.reactions.reduce(
+        (acc, r) => {
+          acc[r.type.code] = (acc[r.type.code] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
     };
 
     return NextResponse.json({
@@ -370,7 +365,7 @@ export async function GET(
     console.error("❌ Error fetching post:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch post" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

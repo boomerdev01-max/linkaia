@@ -11,7 +11,7 @@ export interface ChatUser {
 
 export interface MessageMedia {
   id: string;
-  type: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'VOICE';
+  type: "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT" | "VOICE";
   url: string;
   filename: string;
   size: number;
@@ -34,7 +34,7 @@ export interface Message {
   id: string;
   conversationId: string;
   content: string | null;
-  type: 'TEXT' | 'MEDIA' | 'VOICE' | 'MIXED';
+  type: "TEXT" | "MEDIA" | "VOICE" | "MIXED";
   isEdited: boolean;
   isDeleted: boolean;
   isPinned: boolean;
@@ -51,7 +51,7 @@ export interface ConversationParticipant {
   id: string;
   userId: string;
   user: ChatUser;
-  role: 'admin' | 'member';
+  role: "admin" | "member";
   joinedAt: string;
   lastReadAt: string | null;
   isMuted: boolean;
@@ -61,7 +61,7 @@ export interface ConversationParticipant {
 export interface Conversation {
   id: string;
   name: string | null;
-  type: 'direct' | 'group';
+  type: "direct" | "group";
   avatarUrl: string | null;
   isArchived: boolean;
   createdAt: string;
@@ -75,7 +75,7 @@ export interface ConversationListItem {
   id: string;
   name: string;
   avatarUrl: string | null;
-  type: 'direct' | 'group';
+  type: "direct" | "group";
   lastMessage: string | null;
   lastMessageTime: string | null;
   lastMessageSenderId: string | null;
@@ -90,25 +90,25 @@ export interface ConversationListItem {
 
 // Realtime payload types
 export interface RealtimeMessagePayload {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  eventType: "INSERT" | "UPDATE" | "DELETE";
   new?: Message;
   old?: { id: string };
 }
 
 export interface RealtimeReactionPayload {
-  eventType: 'INSERT' | 'DELETE';
+  eventType: "INSERT" | "DELETE";
   new?: MessageReaction & { messageId: string };
   old?: { id: string; messageId: string };
 }
 
 // Message reactions emojis
 export const MESSAGE_REACTIONS = [
-  { emoji: '👍', label: 'Pouce' },
-  { emoji: '❤️', label: 'Coeur' },
-  { emoji: '😂', label: 'Rire' },
-  { emoji: '😮', label: 'Surpris' },
-  { emoji: '😢', label: 'Triste' },
-  { emoji: '🙏', label: 'Merci' },
+  { emoji: "👍", label: "Pouce" },
+  { emoji: "❤️", label: "Coeur" },
+  { emoji: "😂", label: "Rire" },
+  { emoji: "😮", label: "Surpris" },
+  { emoji: "😢", label: "Triste" },
+  { emoji: "🙏", label: "Merci" },
 ] as const;
 
-export type MessageReactionEmoji = typeof MESSAGE_REACTIONS[number]['emoji'];
+export type MessageReactionEmoji = (typeof MESSAGE_REACTIONS)[number]["emoji"];

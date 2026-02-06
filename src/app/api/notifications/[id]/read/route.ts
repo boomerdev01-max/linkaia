@@ -9,9 +9,11 @@ import { prisma } from "@/lib/prisma";
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }, // ← CHANGEMENT OBLIGATOIRE ICI
 ) {
   try {
+    const { id } = await params; // ← LIGNE À AJOUTER (await + destructuring)
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user: supabaseUser },
@@ -20,7 +22,7 @@ export async function PUT(
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -31,13 +33,13 @@ export async function PUT(
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const notification = await prisma.notification.findFirst({
       where: {
-        id: params.id,
+        id, // ← remplace params.id par id (la variable awaitée)
         userId: user.id,
       },
     });
@@ -45,12 +47,12 @@ export async function PUT(
     if (!notification) {
       return NextResponse.json(
         { success: false, error: "Notification non trouvée" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     await prisma.notification.update({
-      where: { id: params.id },
+      where: { id }, // ← remplace params.id par id
       data: {
         isRead: true,
         readAt: new Date(),
@@ -65,10 +67,7 @@ export async function PUT(
     console.error("Error marking notification as read:", error);
     return NextResponse.json(
       { success: false, error: "Failed to update notification" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-
-
-

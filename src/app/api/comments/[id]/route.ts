@@ -9,9 +9,11 @@ import { prisma } from "@/lib/prisma";
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }, // ← CHANGEMENT ICI
 ) {
   try {
+    const { id } = await params; // ← OBLIGATOIRE : await + destructuring
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user: supabaseUser },
@@ -20,7 +22,7 @@ export async function DELETE(
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -31,32 +33,31 @@ export async function DELETE(
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Vérifier que le commentaire existe et appartient à l'utilisateur
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id }, // ← on utilise la variable id awaitée
     });
 
     if (!comment) {
       return NextResponse.json(
         { success: false, error: "Commentaire non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (comment.authorId !== user.id) {
       return NextResponse.json(
         { success: false, error: "Non autorisé" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    // Supprimer le commentaire (Cascade supprimera automatiquement les réactions et réponses)
     await prisma.comment.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({
@@ -67,7 +68,7 @@ export async function DELETE(
     console.error("❌ Error deleting comment:", error);
     return NextResponse.json(
       { success: false, error: "Failed to delete comment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -75,15 +76,14 @@ export async function DELETE(
 /**
  * PUT /api/comments/[id]
  * Modifie le contenu d'un commentaire (seulement par l'auteur)
- *
- * Body:
- * - content: string (requis)
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }, // ← CHANGEMENT ICI
 ) {
   try {
+    const { id } = await params; // ← OBLIGATOIRE
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user: supabaseUser },
@@ -92,7 +92,7 @@ export async function PUT(
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -103,43 +103,40 @@ export async function PUT(
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Vérifier que le commentaire existe et appartient à l'utilisateur
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!comment) {
       return NextResponse.json(
         { success: false, error: "Commentaire non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (comment.authorId !== user.id) {
       return NextResponse.json(
         { success: false, error: "Non autorisé" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    // Parser le body
     const body = await request.json();
     const { content } = body;
 
     if (!content || content.trim() === "") {
       return NextResponse.json(
         { success: false, error: "Le contenu ne peut pas être vide" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Mettre à jour le commentaire
     const updatedComment = await prisma.comment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         content,
         editedAt: new Date(),
@@ -176,7 +173,7 @@ export async function PUT(
     console.error("❌ Error updating comment:", error);
     return NextResponse.json(
       { success: false, error: "Failed to update comment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
