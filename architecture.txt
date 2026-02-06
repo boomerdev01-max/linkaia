@@ -1,0 +1,415 @@
+Linkaïa
+├── .env
+├── .gitignore
+├── README.md
+├── architecture.txt
+├── components.json
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── prisma
+│   ├── schema.prisma
+│   └── seed.ts
+├── prisma.config.ts
+├── src
+│   ├── app
+│   │   ├── (auth)
+│   │   │   ├── change-password
+│   │   │   │   └── page.tsx
+│   │   │   ├── company
+│   │   │   │   ├── documents
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── legal-details
+│   │   │   │       └── page.tsx
+│   │   │   ├── forgot-password
+│   │   │   │   └── page.tsx
+│   │   │   ├── reset-password
+│   │   │   │   └── page.tsx
+│   │   │   ├── signin
+│   │   │   │   └── page.tsx
+│   │   │   ├── signup
+│   │   │   │   ├── company
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── page.tsx
+│   │   │   └── verify-email
+│   │   │       └── page.tsx
+│   │   ├── admin
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   └── users
+│   │   │       └── profiles
+│   │   │           └── page.tsx
+│   │   ├── api
+│   │   │   ├── admin
+│   │   │   │   ├── dashboard
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── users
+│   │   │   │       └── route.ts
+│   │   │   ├── auth
+│   │   │   │   ├── callback
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── company
+│   │   │   │   │   ├── documents
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── legal-details
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── signup
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── forgot-password
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── resend-code
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── reset-password
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── signin
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── signout
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── signup
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── verify-email
+│   │   │   │       └── route.ts
+│   │   │   ├── chat
+│   │   │   │   ├── conversations
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   └── messages
+│   │   │   │   │   │       └── route.ts
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── messages
+│   │   │   │   │   └── [id]
+│   │   │   │   │       ├── reactions
+│   │   │   │   │       │   └── route.ts
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── search
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── start
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── unread-count
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── upload
+│   │   │   │       └── route.ts
+│   │   │   ├── comments
+│   │   │   │   ├── [id]
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── notifications
+│   │   │   │   ├── [id]
+│   │   │   │   │   └── read
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── mark-all-read
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── route.ts
+│   │   │   │   └── unread-count
+│   │   │   │       └── route.ts
+│   │   │   ├── posts
+│   │   │   │   ├── [id]
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── create
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── preference
+│   │   │   │   ├── init
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── skip
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── update
+│   │   │   │       └── route.ts
+│   │   │   ├── profile
+│   │   │   │   ├── [id]
+│   │   │   │   │   ├── like
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── reviews
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── edit
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── init
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── reference-data
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── skip
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── update
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── upload-photo
+│   │   │   │       └── route.ts
+│   │   │   ├── rbac
+│   │   │   │   ├── check-permission
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── user-info
+│   │   │   │       └── route.ts
+│   │   │   ├── reactions
+│   │   │   │   └── toggle
+│   │   │   │       └── route.ts
+│   │   │   ├── reports
+│   │   │   │   ├── categories
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── subscriptions
+│   │   │   │   ├── cancel
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── checkout
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── current
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── current-user-subscription
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── plans
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── webhook
+│   │   │   │       └── route.ts
+│   │   │   ├── suggestions
+│   │   │   │   └── route.ts
+│   │   │   └── users
+│   │   │       └── search
+│   │   │           └── route.ts
+│   │   ├── chat
+│   │   │   ├── ChatClient.tsx
+│   │   │   └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── home
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   ├── my-profile
+│   │   │   └── page.tsx
+│   │   ├── notifications
+│   │   │   └── page.tsx
+│   │   ├── onboarding
+│   │   │   ├── preferences
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── welcome
+│   │   │   │       └── page.tsx
+│   │   │   └── profile
+│   │   │       ├── page.tsx
+│   │   │       └── welcome
+│   │   │           └── page.tsx
+│   │   ├── page.tsx
+│   │   ├── pricing
+│   │   │   └── page.tsx
+│   │   ├── profile
+│   │   │   ├── [id]
+│   │   │   │   └── page.tsx
+│   │   │   └── edit
+│   │   │       └── page.tsx
+│   │   ├── subscription
+│   │   │   └── page.tsx
+│   │   ├── suggestions
+│   │   │   └── page.tsx
+│   │   └── user
+│   │       └── [id]
+│   │           ├── UserProfileView.tsx
+│   │           └── page.tsx
+│   ├── components
+│   │   ├── ModalNavigation.tsx
+│   │   ├── ModalSteps
+│   │   │   ├── GenderStep.tsx
+│   │   │   ├── RelationshipStep.tsx
+│   │   │   └── types.ts
+│   │   ├── NotificationsClient.tsx
+│   │   ├── PreferenceModal
+│   │   │   ├── PreferenceModal.tsx
+│   │   │   ├── PreferenceModalNavigation.tsx
+│   │   │   ├── steps
+│   │   │   │   ├── AppearancePreferenceStep.tsx
+│   │   │   │   ├── ConvictionsPreferenceStep.tsx
+│   │   │   │   ├── EducationPreferenceStep.tsx
+│   │   │   │   ├── FamilyPreferenceStep.tsx
+│   │   │   │   ├── GenderAgeStep.tsx
+│   │   │   │   ├── HabitsPreferenceStep.tsx
+│   │   │   │   ├── InterestsPreferenceStep.tsx
+│   │   │   │   ├── OriginsPreferenceStep.tsx
+│   │   │   │   ├── PersonalityPreferenceStep.tsx
+│   │   │   │   ├── RelationshipOrientationPreferenceStep.tsx
+│   │   │   │   └── ResidencePreferenceStep.tsx
+│   │   │   └── types.ts
+│   │   ├── SearchResults.tsx
+│   │   ├── UserProfileButton.tsx
+│   │   ├── admin
+│   │   │   ├── AdminHeader.tsx
+│   │   │   ├── AdminSidebar.tsx
+│   │   │   └── UserProfilesClient.tsx
+│   │   ├── auth
+│   │   │   ├── CompanyDocumentsUpload.tsx
+│   │   │   ├── CompanyLegalDetailsForm.tsx
+│   │   │   ├── CompanySignupForm.tsx
+│   │   │   ├── ForgotPasswordForm.tsx
+│   │   │   ├── ResetPasswordForm.tsx
+│   │   │   ├── SigninForm.tsx
+│   │   │   ├── SignupForm.tsx
+│   │   │   └── VerifyEmailForm.tsx
+│   │   ├── chat
+│   │   │   ├── ConversationItem.tsx
+│   │   │   ├── ConversationView.tsx
+│   │   │   ├── MessageBubble.tsx
+│   │   │   ├── MessageInput.tsx
+│   │   │   ├── TypingIndicator.tsx
+│   │   │   └── UserSearchModal.tsx
+│   │   ├── chat-message.tsx
+│   │   ├── comments
+│   │   │   ├── CommentInput.tsx
+│   │   │   ├── CommentItem.tsx
+│   │   │   └── CommentSection.tsx
+│   │   ├── home
+│   │   │   ├── CreatePostModal.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── HomeClient.tsx
+│   │   │   ├── LeftSidebar.tsx
+│   │   │   ├── LogoutConfirmModal.tsx
+│   │   │   ├── MainFeed.tsx
+│   │   │   ├── PostCard.tsx
+│   │   │   ├── PostComposer.tsx
+│   │   │   ├── RightSidebar.tsx
+│   │   │   ├── StoryCarousel.tsx
+│   │   │   ├── UserMenuPopup.tsx
+│   │   │   └── UserProfileButton.tsx
+│   │   ├── pricing
+│   │   │   ├── PricingPage.tsx
+│   │   │   └── SubscriptionPage.tsx
+│   │   ├── profile
+│   │   │   ├── ModalNavigation.tsx
+│   │   │   ├── ProfileEditModal.tsx
+│   │   │   ├── ProfileModal.tsx
+│   │   │   ├── ProfileView.tsx
+│   │   │   ├── PublicProfileView.tsx
+│   │   │   ├── ReportModal.tsx
+│   │   │   ├── ReviewModal.tsx
+│   │   │   ├── ReviewsSection.tsx
+│   │   │   └── steps
+│   │   │       ├── AppearanceStep.tsx
+│   │   │       ├── BioStep.tsx
+│   │   │       ├── ConvictionsStep.tsx
+│   │   │       ├── EducationStep.tsx
+│   │   │       ├── FamilyPersonalityStep.tsx
+│   │   │       ├── HabitsStep.tsx
+│   │   │       ├── IdentityStep.tsx
+│   │   │       ├── InterestsStep.tsx
+│   │   │       ├── OrientationRelationshipStep.tsx
+│   │   │       ├── OriginsStep.tsx
+│   │   │       ├── PhotoStep.tsx
+│   │   │       ├── ResidenceStep.tsx
+│   │   │       └── WorkStep.tsx
+│   │   ├── reactions
+│   │   │   ├── ReactionButton.tsx
+│   │   │   └── ReactionPicker.tsx
+│   │   ├── realtime-chat.tsx
+│   │   ├── suggestions
+│   │   │   ├── SuggestionsClient.tsx
+│   │   │   └── UpgradeBanners.tsx
+│   │   ├── theme-provider.tsx
+│   │   └── ui
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── select.tsx
+│   │       ├── sonner.tsx
+│   │       └── tabs.tsx
+│   ├── generated
+│   │   └── prisma
+│   │       ├── browser.ts
+│   │       ├── client.ts
+│   │       ├── commonInputTypes.ts
+│   │       ├── enums.ts
+│   │       ├── internal
+│   │       │   ├── class.ts
+│   │       │   ├── prismaNamespace.ts
+│   │       │   └── prismaNamespaceBrowser.ts
+│   │       ├── models
+│   │       │   ├── Action.ts
+│   │       │   ├── City.ts
+│   │       │   ├── Comment.ts
+│   │       │   ├── CompanyProfile.ts
+│   │       │   ├── Conversation.ts
+│   │       │   ├── ConversationParticipant.ts
+│   │       │   ├── Currency.ts
+│   │       │   ├── Friendship.ts
+│   │       │   ├── Interest.ts
+│   │       │   ├── InterestCategory.ts
+│   │       │   ├── MatchScore.ts
+│   │       │   ├── Menu.ts
+│   │       │   ├── MenuPermission.ts
+│   │       │   ├── Message.ts
+│   │       │   ├── MessageMedia.ts
+│   │       │   ├── MessageReaction.ts
+│   │       │   ├── MessageReadReceipt.ts
+│   │       │   ├── Nationality.ts
+│   │       │   ├── Notification.ts
+│   │       │   ├── Permission.ts
+│   │       │   ├── PermissionAction.ts
+│   │       │   ├── Post.ts
+│   │       │   ├── PostMedia.ts
+│   │       │   ├── Preference.ts
+│   │       │   ├── PreferenceCity.ts
+│   │       │   ├── PreferenceInterest.ts
+│   │       │   ├── PreferenceNationality.ts
+│   │       │   ├── Profil.ts
+│   │       │   ├── ProfilInterest.ts
+│   │       │   ├── ProfilNationalite.ts
+│   │       │   ├── ProfileLike.ts
+│   │       │   ├── Reaction.ts
+│   │       │   ├── ReactionType.ts
+│   │       │   ├── Report.ts
+│   │       │   ├── ReportCategory.ts
+│   │       │   ├── Review.ts
+│   │       │   ├── Role.ts
+│   │       │   ├── RolePermission.ts
+│   │       │   ├── StripeCustomer.ts
+│   │       │   ├── StripeInvoice.ts
+│   │       │   ├── StripePaymentMethod.ts
+│   │       │   ├── SubscriptionFeature.ts
+│   │       │   ├── SubscriptionHistory.ts
+│   │       │   ├── SubscriptionType.ts
+│   │       │   ├── User.ts
+│   │       │   ├── UserRole.ts
+│   │       │   └── UserSubscription.ts
+│   │       └── models.ts
+│   ├── hooks
+│   │   ├── use-auto-save.ts
+│   │   ├── use-conversations.ts
+│   │   ├── use-messages.ts
+│   │   ├── use-realtime-messages.tsx
+│   │   ├── use-typing-indicator.ts
+│   │   ├── use-unread-messages.ts
+│   │   ├── useNotifications.ts
+│   │   ├── useProfileLike.ts
+│   │   ├── useReports.ts
+│   │   ├── useReviews.ts
+│   │   └── useSearchUsers.ts
+│   ├── lib
+│   │   ├── auth-helpers.ts
+│   │   ├── client.ts
+│   │   ├── currency.ts
+│   │   ├── email.ts
+│   │   ├── encryption.ts
+│   │   ├── matching.ts
+│   │   ├── notification-helpers.ts
+│   │   ├── prisma.ts
+│   │   ├── rbac.ts
+│   │   ├── redirect-logic.ts
+│   │   ├── roles-config.ts
+│   │   ├── server.ts
+│   │   ├── stripe.ts
+│   │   ├── supabase
+│   │   │   ├── admin-client.ts
+│   │   │   ├── browser-client.ts
+│   │   │   ├── chat-storage.ts
+│   │   │   ├── company-storage.ts
+│   │   │   ├── post-media-storage.ts
+│   │   │   ├── server-admin.ts
+│   │   │   ├── server-client.ts
+│   │   │   └── storage.ts
+│   │   └── utils.ts
+│   ├── proxy.ts
+│   ├── types
+│   │   └── chat.ts
+│   └── utils
+│       └── envfile.txt
+├── tailwind.config.ts
+└── tsconfig.json
+
+128 directories, 285 files

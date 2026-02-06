@@ -1,0 +1,1186 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+enum UserType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum CompanyStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CompanyRegistrationType {
+  ONG
+  SARL
+  SAS
+  SASU
+  EURL
+  SA
+  SNC
+  SCS
+  ASSOCIATION
+  FONDATION
+  GIE
+  COOPERATIVE
+  AUTO_ENTREPRENEUR
+  OTHER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  nom       String
+  prenom    String
+  password  String?  // Null pour OAuth users
+  
+  // Supabase Auth sync
+  supabaseId String? @unique @map("supabase_id")
+  
+  // Email verification
+  emailVerified Boolean  @default(false) @map("email_verified")
+  verificationCode String? @map("verification_code")
+  verificationCodeExpiry DateTime? @map("verification_code_expiry")
+  
+  // Password reset
+  resetPasswordCode String? @map("reset_password_code")
+  resetPasswordCodeExpiry DateTime? @map("reset_password_code_expiry")
+  
+  // OAuth provider
+  provider String @default("email") // "email" | "google"
+  
+  // Profile tracking flags
+  isProfileCompleted Boolean @default(false) @map("is_profile_completed")
+  isProfileTerminated Boolean @default(false) @map("is_profile_terminated")
+  skipProfileSetup Boolean @default(false) @map("skip_profile_setup")
+
+   // Preference tracking flags
+  isPreferenceCompleted Boolean @default(false) @map("is_preference_completed")
+  isPreferenceTerminated Boolean @default(false) @map("is_preference_terminated")
+  skipPreferenceSetup Boolean @default(false) @map("skip_preference_setup")
+
+    // Relations pour les likes de profil
+  profileLikesGiven    ProfileLike[] @relation("ProfileLikesGiven")
+  profileLikesReceived ProfileLike[] @relation("ProfileLikesReceived")
+
+  // ✨ NOUVEAUX CHAMPS RBAC
+  adminCreated       Boolean @default(false) @map("admin_created")
+  mustChangePassword Boolean @default(false) @map("must_change_password")
+  isFirstLogin       Boolean @default(true) @map("is_first_login")
+  level              String  @default("free") // free, premium, platinium, prestige
+  userType              UserType @default(INDIVIDUAL) @map("user_type")
+
+  // ✨ NOUVELLES RELATIONS RBAC
+  roles UserRole[]
+  
+  // Relations
+  profil Profil?
+  companyProfile CompanyProfile?
+  preference Preference?
+  
+  // ✅ POSTS & SOCIAL
+  posts             Post[]
+  comments          Comment[]
+  reactions         Reaction[]
+  notifications     Notification[]
+
+  // MESSAGING RELATIONS
+  conversationsCreated     Conversation[]
+  conversationParticipants ConversationParticipant[]
+  messagesSent             Message[]
+  messageReactions         MessageReaction[]
+  messageReadReceipts      MessageReadReceipt[]
+
+  // Ajout des relations d'abonnement
+  subscription        UserSubscription?
+  subscriptionHistory SubscriptionHistory[]
+  stripeCustomer      StripeCustomer?
+
+  // Ajout des relations MatchScore
+  matchScoresGiven    MatchScore[] @relation("MatchScoresGiven")
+  matchScoresReceived MatchScore[] @relation("MatchScoresReceived")
+  
+  // ✅ FRIENDSHIPS
+  friendshipsInitiated Friendship[] @relation("FriendshipInitiator")
+  friendshipsReceived  Friendship[] @relation("FriendshipReceiver")
+  
+    // Relations pour les signalements
+  reportsGiven      Report[] @relation("ReportsGiven")
+  reportsReceived   Report[] @relation("ReportsReceived")
+  reportsReviewed   Report[] @relation("ReportsReviewed")
+  
+  // Relations pour les avis
+  reviewsGiven      Review[] @relation("ReviewsGiven")
+  reviewsReceived   Review[] @relation("ReviewsReceived")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+
+}
+
+// ============================================
+// RBAC SYSTEM
+// ============================================
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // "administrator", "standard_user", "moderator"
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  users       UserRole[]
+  permissions RolePermission[]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique // "user.read", "user.create", "post.moderate"
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  roles   RolePermission[]
+  menus   MenuPermission[]
+  actions PermissionAction[]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("permissions")
+}
+
+model Action {
+  id          String   @id @default(uuid())
+  method      String   // "GET", "POST", "PUT", "DELETE"
+  endpoint    String   // "/api/users", "/api/posts"
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  permissions PermissionAction[]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([method, endpoint])
+  @@map("actions")
+}
+
+model Menu {
+  id       String  @id @default(uuid())
+  name     String  @unique // "Gestion des utilisateurs", "Consulter les profils"
+  path     String? @unique // "/admin/users", "/admin/users/profiles"
+  icon     String? // "Users", "UserCheck" (lucide icon names)
+  order    Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+  
+  // Auto-référence pour hiérarchie menu/sous-menu
+  parent   Menu?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId String? @map("parent_id")
+  children Menu[] @relation("MenuHierarchy")
+  
+  permissions MenuPermission[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("menus")
+}
+
+// ============================================
+// TABLES ASSOCIATIVES RBAC
+// ============================================
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model PermissionAction {
+  permissionId String @map("permission_id")
+  actionId     String @map("action_id")
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  action     Action     @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([permissionId, actionId])
+  @@map("permission_actions")
+}
+
+model MenuPermission {
+  menuId       String @map("menu_id")
+  permissionId String @map("permission_id")
+
+  menu       Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([menuId, permissionId])
+  @@map("menu_permissions")
+}
+
+// ============================================
+// MESSAGING SYSTEM
+// ============================================
+
+model Conversation {
+  id          String   @id @default(uuid())
+  name        String?  // NULL pour les conversations directes
+  type        String   @default("direct") // "direct" | "group"
+  avatarUrl   String?  @map("avatar_url")
+  
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  
+  isArchived  Boolean  @default(false) @map("is_archived")
+  
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([type])
+  @@index([updatedAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String   @id @default(uuid())
+  
+  conversationId String   @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  role           String   @default("member") // "admin" | "member"
+  joinedAt       DateTime @default(now()) @map("joined_at")
+  lastReadAt     DateTime? @map("last_read_at")
+  isMuted        Boolean  @default(false) @map("is_muted")
+  isArchived     Boolean  @default(false) @map("is_archived")
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id               String   @id @default(uuid())
+  
+  conversationId   String   @map("conversation_id")
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  senderId         String   @map("sender_id")
+  sender           User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  contentEncrypted String?  @map("content_encrypted") @db.Text
+  contentIv        String?  @map("content_iv")
+  
+  type             String   @default("TEXT") // "TEXT" | "MEDIA" | "VOICE" | "MIXED"
+  
+  replyToId        String?  @map("reply_to_id")
+  replyTo          Message? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies          Message[] @relation("MessageReplies")
+  
+  isEdited         Boolean  @default(false) @map("is_edited")
+  isDeleted        Boolean  @default(false) @map("is_deleted")
+  isPinned         Boolean  @default(false) @map("is_pinned")
+  
+  media            MessageMedia[]
+  reactions        MessageReaction[]
+  readReceipts     MessageReadReceipt[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model MessageMedia {
+  id           String   @id @default(uuid())
+  
+  messageId    String   @map("message_id")
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  type         String   // "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT" | "VOICE"
+  url          String
+  filename     String?
+  mimeType     String?  @map("mime_type")
+  size         Int?
+  width        Int?
+  height       Int?
+  duration     Int?     // En secondes pour audio/video
+  thumbnailUrl String?  @map("thumbnail_url")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([messageId])
+  @@map("message_media")
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  
+  messageId String   @map("message_id")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  emoji     String   // "👍" | "❤️" | "😂" | "😮" | "😢" | "🙏"
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@index([userId])
+  @@map("message_reactions")
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(uuid())
+  
+  messageId String   @map("message_id")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  readAt    DateTime @default(now()) @map("read_at")
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("message_read_receipts")
+}
+
+// ============================================
+// FRIENDSHIP SYSTEM
+// ============================================
+
+model Friendship {
+  id         String   @id @default(uuid())
+  
+  initiatorId String  @map("initiator_id")
+  initiator   User    @relation("FriendshipInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  
+  receiverId  String  @map("receiver_id")
+  receiver    User    @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  status      String  @default("pending") // "pending" | "accepted" | "rejected" | "blocked"
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([initiatorId, receiverId])
+  @@index([initiatorId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("friendships")
+}
+
+// ============================================
+// POSTS SYSTEM
+// ============================================
+
+model Post {
+  id          String   @id @default(uuid())
+  
+  authorId    String   @map("author_id")
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  content     String?  @db.Text // Texte du post (optionnel si photos/vidéos)
+  visibility  String   @default("public") // "public" | "friends" | "private"
+  
+  // Médias associés
+  media       PostMedia[]
+  
+  // Interactions
+  reactions   Reaction[]
+  comments    Comment[]
+  
+  // Métadonnées
+  editedAt    DateTime? @map("edited_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([authorId])
+  @@index([visibility])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+// ============================================
+// POST MEDIA (Photos & Videos)
+// ============================================
+
+model PostMedia {
+  id        String   @id @default(uuid())
+  
+  postId    String   @map("post_id")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  type      String   // "photo" | "video"
+  url       String   // URL Supabase Storage
+  order     Int      @default(0) // Ordre d'affichage
+  
+  // Métadonnées
+  mimeType  String?  @map("mime_type") // "image/jpeg", "video/mp4", etc.
+  size      Int?     // Taille en bytes
+  width     Int?     // Largeur (pour images)
+  height    Int?     // Hauteur (pour images)
+  duration  Int?     // Durée en secondes (pour vidéos)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([postId])
+  @@index([type])
+  @@map("post_media")
+}
+
+// ============================================
+// REACTIONS SYSTEM
+// ============================================
+
+model ReactionType {
+  id        String     @id @default(uuid())
+  
+  code      String     @unique // "support", "love", "laugh", "wow", "sad", "angry"
+  label     String     // "Je soutiens", "Coup de cœur", etc.
+  emoji     String     // "✊", "💖", "😂", "🤯", "🥺", "😡"
+  order     Int        @default(0)
+  
+  reactions Reaction[]
+  
+  @@map("reaction_types")
+}
+
+model Reaction {
+  id        String       @id @default(uuid())
+  
+  userId    String       @map("user_id")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  typeId    String       @map("type_id")
+  type      ReactionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  
+  // Réaction sur Post ou Comment
+  postId    String?      @map("post_id")
+  post      Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  commentId String?      @map("comment_id")
+  comment   Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@unique([userId, postId, typeId])
+  @@unique([userId, commentId, typeId])
+  @@index([userId])
+  @@index([postId])
+  @@index([commentId])
+  @@index([typeId])
+  @@map("reactions")
+}
+
+// ============================================
+// COMMENTS SYSTEM (with Threading)
+// ============================================
+
+model Comment {
+  id          String   @id @default(uuid())
+  
+  authorId    String   @map("author_id")
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  postId      String   @map("post_id")
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  content     String   @db.Text
+  
+  // Threading: Un commentaire peut être une réponse
+  parentId    String?  @map("parent_id")
+  parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+  
+  // Interactions
+  reactions   Reaction[]
+  
+  // Métadonnées
+  editedAt    DateTime? @map("edited_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([authorId])
+  @@index([postId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+// ============================================
+// NOTIFICATIONS SYSTEM
+// ============================================
+
+model Notification {
+  id       String  @id @default(uuid())
+  
+  userId   String  @map("user_id")
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type     String  // "post_reaction", "post_comment", "comment_reaction", "comment_reply", "friendship_request", "friendship_accepted"
+  title    String
+  message  String
+  
+  isRead   Boolean @default(false) @map("is_read")
+  readAt   DateTime? @map("read_at")
+  
+  // Métadonnées pour lien vers entité concernée
+  metadata Json? // { postId?, commentId?, friendshipId?, actorId }
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================
+// PREFERENCE MODEL
+// ============================================
+model Preference {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // === GENRE & ÂGE (Step 1) ===
+  genderPreference    String?   @map("gender_preference") // "man" | "woman" | "non-binary" | "both" | "any"
+  ageMin              Int?      @map("age_min") // 18
+  ageMax              Int?      @map("age_max") // 100
+  
+  // === APPARENCE (Step 2) ===
+  heightMin           Float?    @map("height_min") // en cm
+  heightMax           Float?    @map("height_max") // en cm
+  weightMin           Float?    @map("weight_min") // en kg
+  weightMax           Float?    @map("weight_max") // en kg
+  skinTonePreference  String?   @map("skin_tone_preference") // "very-light" | "light" | "medium" | "tanned" | "brown" | "dark" | "any"
+  
+  // === STATUT & ORIENTATION (Step 3) ===
+  relationshipStatusPreference String? @map("relationship_status_preference") // "single" | "couple" | "complicated" | "open" | "any"
+  sexualOrientationPreference  String? @map("sexual_orientation_preference") // "hetero" | "homo" | "bi" | "pan" | "asexual" | "any"
+  
+  // === CENTRES D'INTÉRÊT (Step 4) ===
+  interestsPreference String?   @map("interests_preference") // "any" | "specific"
+  // Si "specific", relation many-to-many avec Interest
+  
+  // === ÉDUCATION (Step 5) ===
+  educationLevelPreference String? @map("education_level_preference") // "high-school" | "bachelor" | "master" | "doctorate" | "any"
+  
+  // === ORIGINES (Step 6) ===
+  countryOriginPreference String? @map("country_origin_preference") // "any" | "specific"
+  // Si "specific", liste de pays/nationalités
+  
+  // === RÉSIDENCE (Step 7) ===
+  countryResidencePreference String? @map("country_residence_preference") // "any" | "specific"
+  locationPreference         String? @map("location_preference") // "any" | "specific"
+  // Si "specific", liste de villes
+  
+  // === HABITUDES (Step 8) ===
+  smokerPreference  String? @map("smoker_preference") // "never" | "sometimes" | "regularly" | "any"
+  alcoholPreference String? @map("alcohol_preference") // "never" | "socially" | "regularly" | "any"
+  
+  // === PROJET FAMILIAL (Step 9) ===
+  hasChildrenPreference  String? @map("has_children_preference") // "yes" | "no" | "soon" | "any"
+  wantsChildrenPreference String? @map("wants_children_preference") // "yes" | "no" | "maybe" | "any"
+  hasPetsPreference      String? @map("has_pets_preference") // "yes" | "no" | "want-one" | "any"
+  
+  // === PERSONNALITÉ (Step 10) ===
+  personalityTypePreference String? @map("personality_type_preference") // "introvert" | "extrovert" | "ambivert" | "any"
+  
+  // === CONVICTIONS (Step 11) ===
+  zodiacSignPreference String? @map("zodiac_sign_preference") // "aries" | "taurus" | ... | "any"
+  religionPreference   String? @map("religion_preference") // "atheist" | "christian" | "muslim" | ... | "any"
+  loveAnimalsPreference String? @map("love_animals_preference") // "yes" | "no" | "neutral" | "any"
+
+  // === RELATIONS (Multi-valeurs) ===
+  selectedInterests      PreferenceInterest[]     // Max 10
+  selectedNationalities  PreferenceNationality[]  // Multiple
+  selectedCities         PreferenceCity[]         // Multiple
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("preferences")
+}
+
+// ============================================
+// PREFERENCE RELATIONS (Many-to-Many)
+// ============================================
+
+model PreferenceInterest {
+  id           String     @id @default(uuid())
+  preferenceId String     @map("preference_id")
+  preference   Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  interestId   String     @map("interest_id")
+  interest     Interest   @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, interestId])
+  @@map("preference_interests")
+}
+
+model PreferenceNationality {
+  id            String      @id @default(uuid())
+  preferenceId  String      @map("preference_id")
+  preference    Preference  @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  nationalityId String      @map("nationality_id")
+  nationality   Nationality @relation(fields: [nationalityId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, nationalityId])
+  @@map("preference_nationalities")
+}
+
+model PreferenceCity {
+  id           String     @id @default(uuid())
+  preferenceId String     @map("preference_id")
+  preference   Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  cityId       String     @map("city_id")
+  city         City       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, cityId])
+  @@map("preference_cities")
+}
+
+// ============================================
+// PROFIL
+// ============================================
+
+model Profil {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // === IDENTITÉ (Step 1) ===
+  pseudo            String?   // Requis
+  birthdate         DateTime? // Requis
+  gender            String?   // Requis - "man" | "woman" | "non-binary" | "PREFER_NOT_TO_SAY"
+  
+  // === PHOTOS (Step 2) ===
+  profilePhotoUrl   String?   @map("profile_photo_url")
+  
+  // === ORIENTATION & SITUATION (Step 3) ===
+  sexualOrientation String?   @map("sexual_orientation") // "hetero" | "homo" | "bi" | "pan" | "asexual" | "PREFER_NOT_TO_SAY"
+  relationshipStatus String?  @map("relationship_status") // "single" | "couple" | "complicated" | "open" | "PREFER_NOT_TO_SAY"
+  
+  // === CENTRES D'INTÉRÊT (Step 4) ===
+  // Relation many-to-many avec Interest
+  
+  // === BIOGRAPHIE (Step 5) ===
+  bio               String?   // Max 500 caractères
+  
+  // === APPARENCE (Step 6) ===
+  height            Float?    // en cm
+  weight            Float?    // en kg
+  skinTone          String?   @map("skin_tone") // "very-light" | "light" | "medium" | "tanned" | "brown" | "dark" | "PREFER_NOT_TO_SAY"
+  
+  // === ÉTUDES (Step 7) ===
+  educationLevel    String?   @map("education_level") // "high-school" | "bachelor" | "master" | "doctorate" | "PREFER_NOT_TO_SAY"
+  studyPlace        String?   @map("study_place") // Nom de l'établissement
+  
+  // === TRAVAIL (Step 8) ===
+  jobTitle          String?   @map("job_title") // Poste occupé
+  companyName       String?   @map("company_name") // Nom de l'entreprise
+  
+  // === ORIGINES (Step 9) ===
+  countryOrigin     String?   @map("country_origin") // Pays d'origine (choix unique)
+  // Nationalités (max 2) - relation many-to-many
+  
+  // === RÉSIDENCE (Step 10) ===
+  countryResidence  String?   @map("country_residence") // Pays de résidence
+  location          String?   // "Paris, France" (liste prédéfinie)
+  
+  // === HABITUDES (Step 11) ===
+  smoker            String?   // "never" | "sometimes" | "regularly" | "PREFER_NOT_TO_SAY"
+  alcohol           String?   // "never" | "socially" | "regularly" | "PREFER_NOT_TO_SAY"
+  
+  // === PROJET FAMILIAL & PERSONNALITÉ (Step 12) ===
+  hasChildren       String?   @map("has_children") // "yes" | "no" | "soon" | "PREFER_NOT_TO_SAY"
+  wantsChildren     String?   @map("wants_children") // "yes" | "no" | "maybe" | "PREFER_NOT_TO_SAY"
+  hasPets           String?   @map("has_pets") // "yes" | "no" | "want-one" | "PREFER_NOT_TO_SAY"
+  personalityType   String?   @map("personality_type") // "introvert" | "extrovert" | "ambivert" | "PREFER_NOT_TO_SAY"
+  
+  // === CONVICTIONS (Step 13) ===
+  zodiacSign        String?   @map("zodiac_sign") // "aries" | "taurus" | ... | "PREFER_NOT_TO_SAY"
+  religion          String?   // "atheist" | "christian" | "muslim" | "jewish" | "buddhist" | "hindu" | "other" | "PREFER_NOT_TO_SAY"
+  loveAnimals       String?   @map("love_animals") // "yes" | "no" | "neutral" | "PREFER_NOT_TO_SAY"
+
+  // === RELATIONS (Multi-valeurs) ===
+  nationalites ProfilNationalite[] // Max 2
+  interests    ProfilInterest[]     // Max 10
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("profils")
+}
+
+model CompanyProfile {
+  id        String @id @default(uuid())
+  userId    String @unique @map("user_id")
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // === IDENTITÉ ENTREPRISE ===
+  companyName  String @map("company_name")
+  legalEmail   String @map("legal_email")
+  
+  // === INFOS LÉGALES ===
+  country              String?
+  registrationType     CompanyRegistrationType? @map("registration_type")
+  legalRepresentative  String? @map("legal_representative")
+  legalAddress         String? @map("legal_address")
+  
+  // === DOCUMENTS ===
+  registrationDocumentUrl String? @map("registration_document_url")
+  logoUrl                 String? @map("logo_url")
+  
+  // === STATUT ===
+  status CompanyStatus @default(PENDING)
+  
+  // === FLAGS COMPLETION ===
+  isLegalDetailsCompleted Boolean @default(false) @map("is_legal_details_completed")
+  isDocumentsCompleted    Boolean @default(false) @map("is_documents_completed")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("company_profiles")
+}
+
+// ============================================
+// CENTRES D'INTÉRÊT
+// ============================================
+
+model InterestCategory {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  emoji     String     // Emoji représentatif de la catégorie
+  order     Int        @default(0)
+  interests Interest[]
+
+  @@map("interest_categories")
+}
+
+model Interest {
+  id         String           @id @default(uuid())
+  name       String
+  emoji      String           // Emoji pour chaque intérêt
+  categoryId String           @map("category_id")
+  category   InterestCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  profiles ProfilInterest[]
+  preferences PreferenceInterest[]
+
+  @@unique([name, categoryId])
+  @@map("interests")
+}
+
+model ProfilInterest {
+  id         String   @id @default(uuid())
+  profilId   String   @map("profil_id")
+  profil     Profil   @relation(fields: [profilId], references: [id], onDelete: Cascade)
+  interestId String   @map("interest_id")
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([profilId, interestId])
+  @@map("profil_interests")
+}
+
+// ============================================
+// NATIONALITÉS
+// ============================================
+
+model Nationality {
+  id       String                @id @default(uuid())
+  code     String                @unique // ISO 3166-1 alpha-2 (FR, US, etc.)
+  nameFr   String                @map("name_fr") // Nom en français
+  nameEn   String                @map("name_en") // Nom en anglais
+  flag     String                // Emoji drapeau 🇫🇷
+  profiles ProfilNationalite[]
+  preferences PreferenceNationality[]
+
+  @@map("nationalities")
+}
+
+model ProfilNationalite {
+  id            String      @id @default(uuid())
+  profilId      String      @map("profil_id")
+  profil        Profil      @relation(fields: [profilId], references: [id], onDelete: Cascade)
+  nationalityId String      @map("nationality_id")
+  nationality   Nationality @relation(fields: [nationalityId], references: [id], onDelete: Cascade)
+  order         Int         @default(1) // 1 ou 2 pour gérer l'ordre
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([profilId, nationalityId])
+  @@map("profil_nationalities")
+}
+
+// ============================================
+// VILLES PRÉDÉFINIES
+// ============================================
+
+model City {
+  id          String @id @default(uuid())
+  name        String
+  countryCode String @map("country_code") // ISO 3166-1 alpha-2
+  countryName String @map("country_name")
+  displayName String @map("display_name") // "Paris, France"
+  preferences PreferenceCity[]
+
+  @@unique([name, countryCode])
+  @@map("cities")
+}
+
+// ============================================
+// CURRENCY & SUBSCRIPTIONS
+// ============================================
+
+model Currency {
+  code              String             @id @unique // "XOF", "EUR", "USD"
+  symbol            String             // "CFA", "€", "$"
+  name              String             // "Franc CFA", "Euro", "Dollar"
+  isActive          Boolean            @default(true) @map("is_active")
+  
+  subscriptionTypes SubscriptionType[]
+  invoices          StripeInvoice[]
+  
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  @@map("currencies")
+}
+
+model SubscriptionType {
+  id          String                @id @default(uuid())
+  code        String                @unique // "FREE", "VIP", "PLATINUM"
+  name        String                // "Gratuit", "VIP", "Platinum"
+  description String?
+  
+  priceMonth  Float                 @default(0) @map("price_month")
+  priceYear   Float                 @default(0) @map("price_year")
+  
+  currencyId  String                @map("currency_id")
+  currency    Currency              @relation(fields: [currencyId], references: [code], onDelete: Restrict)
+  
+  color       String?               // Couleur pour l'affichage
+  icon        String?               // Icône (optionnel)
+  order       Int                   @default(0) // Ordre d'affichage
+  isActive    Boolean               @default(true) @map("is_active")
+  
+  features    SubscriptionFeature[]
+  subscriptions UserSubscription[]
+  history     SubscriptionHistory[]
+  
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@map("subscription_types")
+}
+
+model SubscriptionFeature {
+  id                 String           @id @default(uuid())
+  subscriptionTypeId String           @map("subscription_type_id")
+  subscriptionType   SubscriptionType @relation(fields: [subscriptionTypeId], references: [id], onDelete: Cascade)
+  
+  featureKey         String           @map("feature_key") // "match_range", "daily_matches", etc.
+  featureValue       String           @map("feature_value") // "20-50", "10", etc.
+  description        String?
+  
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@map("subscription_features")
+}
+
+model UserSubscription {
+  id                   String           @id @default(uuid())
+  userId               String           @unique @map("user_id")
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  subscriptionTypeId   String           @map("subscription_type_id")
+  subscriptionType     SubscriptionType @relation(fields: [subscriptionTypeId], references: [id], onDelete: Restrict)
+  
+  startDate            DateTime         @default(now()) @map("start_date")
+  endDate              DateTime?        @map("end_date")
+  
+  status               String           @default("active") // "active", "cancelled", "expired"
+  autoRenew            Boolean          @default(false) @map("auto_renew")
+  
+  stripeSubscriptionId String?          @unique @map("stripe_subscription_id")
+  
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("user_subscriptions")
+}
+
+model SubscriptionHistory {
+  id                 String           @id @default(uuid())
+  userId             String           @map("user_id")
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  subscriptionTypeId String           @map("subscription_type_id")
+  subscriptionType   SubscriptionType @relation(fields: [subscriptionTypeId], references: [id], onDelete: Restrict)
+  
+  action             String           // "subscribed", "upgraded", "downgraded", "cancelled", "expired"
+  startDate          DateTime         @map("start_date")
+  endDate            DateTime?        @map("end_date")
+  
+  pricePaid          Float            @default(0) @map("price_paid")
+  currencyCode       String?          @map("currency_code")
+  
+  stripeSubscriptionId String?        @map("stripe_subscription_id")
+  
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("subscription_history")
+}
+
+model StripeCustomer {
+  id               String              @id @default(uuid())
+  userId           String              @unique @map("user_id")
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  stripeCustomerId String              @unique @map("stripe_customer_id")
+  email            String
+  
+  paymentMethods   StripePaymentMethod[]
+  invoices         StripeInvoice[]
+  
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  @@map("stripe_customers")
+}
+
+model StripePaymentMethod {
+  id               String         @id @default(uuid())
+  stripeCustomerId String         @map("stripe_customer_id")
+  stripeCustomer   StripeCustomer @relation(fields: [stripeCustomerId], references: [id], onDelete: Cascade)
+  
+  stripePaymentMethodId String    @unique @map("stripe_payment_method_id")
+  type             String         // "card", "sepa_debit", etc.
+  last4            String?
+  brand            String?        // "visa", "mastercard", etc.
+  expMonth         Int?           @map("exp_month")
+  expYear          Int?           @map("exp_year")
+  
+  isDefault        Boolean        @default(false) @map("is_default")
+  
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@map("stripe_payment_methods")
+}
+
+model StripeInvoice {
+  id                 String         @id @default(uuid())
+  stripeCustomerId   String         @map("stripe_customer_id")
+  stripeCustomer     StripeCustomer @relation(fields: [stripeCustomerId], references: [id], onDelete: Cascade)
+  
+  stripeInvoiceId    String         @unique @map("stripe_invoice_id")
+  stripeSubscriptionId String?      @map("stripe_subscription_id")
+  
+  amountPaid         Float          @map("amount_paid")
+  currencyId         String         @map("currency_id")
+  currency           Currency       @relation(fields: [currencyId], references: [code], onDelete: Restrict)
+  
+  status             String         // "paid", "open", "void", "uncollectible"
+  hostedInvoiceUrl   String?        @map("hosted_invoice_url")
+  invoicePdf         String?        @map("invoice_pdf")
+  
+  paidAt             DateTime?      @map("paid_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+
+  @@index([stripeCustomerId])
+  @@map("stripe_invoices")
+}
+
+model MatchScore {
+id            String   @id @default(uuid())
+// Utilisateur qui fait le matching
+userId        String   @map("user_id")
+user          User     @relation("MatchScoresGiven", fields: [userId], references: [id], onDelete: Cascade)
+// Utilisateur cible du matching
+targetUserId  String   @map("target_user_id")
+targetUser    User     @relation("MatchScoresReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+// Score de compatibilité (0-100%)
+score         Int      // Score global normalisé
+// Détails du matching
+matchedCriteria Json?  @map("matched_criteria") // Array des critères matchés: ["Genre", "Âge", "Localisation"]
+totalCriteria   Int    @map("total_criteria")   // Nombre total de critères évalués
+// Match bidirectionnel (si les deux utilisateurs se matchent)
+isBidirectional      Boolean @default(false) @map("is_bidirectional")
+bidirectionalScore   Int?    @map("bidirectional_score") // Score de l'autre sens
+// Métadonnées pour invalidation du cache
+lastCalculated DateTime @default(now()) @map("last_calculated")
+createdAt DateTime @default(now()) @map("created_at")
+updatedAt DateTime @updatedAt @map("updated_at")
+@@unique([userId, targetUserId])
+@@index([userId, score])
+@@index([targetUserId])
+@@index([score])
+@@index([lastCalculated])
+@@map("match_scores")
+}
+
+model ProfileLike {
+  id        String   @id @default(uuid())
+  
+  userId    String   @map("user_id")
+  user      User     @relation("ProfileLikesGiven", fields: [userId], references: [id], onDelete: Cascade)
+  
+  profileId String   @map("profile_id")
+  profile   User     @relation("ProfileLikesReceived", fields: [profileId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, profileId])
+  @@index([userId])
+  @@index([profileId])
+  @@map("profile_likes")
+}
+
+// ============================================
+// REPORTS & REVIEWS SYSTEM
+// ============================================
+
+model ReportCategory {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  label       String
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  reports     Report[]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("report_categories")
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  
+  reporterId String   @map("reporter_id")
+  reporter   User     @relation("ReportsGiven", fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  reportedUserId String @map("reported_user_id")
+  reportedUser   User   @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  
+  categoryId String   @map("category_id")
+  category   ReportCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  
+  reason     String   @db.Text
+  
+  status     String   @default("pending") // "pending" | "reviewed" | "resolved" | "rejected"
+  
+  reviewedBy String?  @map("reviewed_by")
+  reviewer   User?    @relation("ReportsReviewed", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  
+  reviewedAt DateTime? @map("reviewed_at")
+  
+  adminNotes String?  @map("admin_notes") @db.Text
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([categoryId])
+  @@map("reports")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  
+  reviewerId String   @map("reviewer_id")
+  reviewer   User     @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  reviewedUserId String @map("reviewed_user_id")
+  reviewedUser   User   @relation("ReviewsReceived", fields: [reviewedUserId], references: [id], onDelete: Cascade)
+  
+  rating     Int      // 1-5 étoiles
+  comment    String   @db.Text
+  
+  isVisible  Boolean  @default(true) @map("is_visible")
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([reviewerId, reviewedUserId])
+  @@index([reviewerId])
+  @@index([reviewedUserId])
+  @@index([rating])
+  @@map("reviews")
+}
