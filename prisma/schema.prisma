@@ -111,6 +111,9 @@ model User {
   subscriptionHistory SubscriptionHistory[]
   stripeCustomer      StripeCustomer?
 
+  clubSubscription        ClubSubscription?
+  clubSubscriptionHistory ClubSubscriptionHistory[]
+
   // Ajout des relations MatchScore
   matchScoresGiven    MatchScore[] @relation("MatchScoresGiven")
   matchScoresReceived MatchScore[] @relation("MatchScoresReceived")
@@ -1183,4 +1186,57 @@ model Review {
   @@index([reviewedUserId])
   @@index([rating])
   @@map("reviews")
+}
+
+model ClubSubscription {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  startDate            DateTime @default(now()) @map("start_date")
+  endDate              DateTime? @map("end_date")
+  
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  stripeCustomerId     String?  @map("stripe_customer_id")
+  
+  status               String   @default("active") // active, cancelled, expired
+  autoRenew            Boolean  @default(true) @map("auto_renew")
+  
+  period               String   // "monthly" ou "yearly"
+  pricePaid            Float    @map("price_paid")
+  currencyCode         String   @default("XOF") @map("currency_code")
+  
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([stripeSubscriptionId])
+  @@map("club_subscriptions")
+}
+
+model ClubSubscriptionHistory {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  action               String   // "subscribed", "renewed", "cancelled", "expired"
+  startDate            DateTime @map("start_date")
+  endDate              DateTime? @map("end_date")
+  
+  pricePaid            Float    @map("price_paid")
+  currencyCode         String   @map("currency_code")
+  period               String
+  
+  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  stripeInvoiceId      String?  @map("stripe_invoice_id")
+  
+  metadata             String?  // JSON pour infos supplémentaires
+  
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("club_subscription_history")
 }

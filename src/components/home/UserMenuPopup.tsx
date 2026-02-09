@@ -1,4 +1,4 @@
-// src/components/home/UserMenuPopup.tsx
+// src/components/home/UserMenuPopup.tsx (VERSION MISE À JOUR)
 "use client";
 
 import Link from "next/link";
@@ -13,6 +13,7 @@ import {
   Shield,
   CreditCard,
   Sparkles,
+  Crown, // ✅ AJOUT
 } from "lucide-react";
 
 interface UserMenuPopupProps {
@@ -40,7 +41,16 @@ export default function UserMenuPopup({
       label: "Suggestions",
       href: "/suggestions",
       badge: "Matchs",
-      highlight: true, // Pour le mettre en avant visuellement
+      highlight: true,
+    },
+    // ✅ AJOUT : Entrée Club fermé LWB
+    {
+      icon: Crown,
+      label: "Club fermé LWB",
+      href: "/club/checkout",
+      badge: "Premium",
+      highlight: true,
+      clubExclusive: true, // Flag spécial pour styling
     },
     {
       icon: Shield,
@@ -151,8 +161,9 @@ export default function UserMenuPopup({
             );
           }
 
-          // ✅ MODIFICATION : Mise en avant du bouton Suggestions
+          // ✅ MODIFICATION : Styling spécial pour Club LWB
           const isHighlighted = item.highlight;
+          const isClubExclusive = item.clubExclusive;
 
           return (
             <Link
@@ -160,24 +171,30 @@ export default function UserMenuPopup({
               href={item.href}
               onClick={onClose}
               className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0 ${
-                isHighlighted
-                  ? "bg-linear-to-r from-[#0F4C5C]/5 to-[#B88A4F]/5"
-                  : ""
+                isClubExclusive
+                  ? "bg-linear-to-r from-[#0F4C5C]/10 to-[#0A3A47]/10"
+                  : isHighlighted
+                    ? "bg-linear-to-r from-[#0F4C5C]/5 to-[#B88A4F]/5"
+                    : ""
               }`}
             >
               <div className="flex items-center gap-3">
                 <item.icon
                   className={`w-5 h-5 ${
-                    isHighlighted
-                      ? "text-[#B88A4F]"
-                      : "text-gray-600 dark:text-gray-400"
+                    isClubExclusive
+                      ? "text-[#0F4C5C] dark:text-[#B88A4F]"
+                      : isHighlighted
+                        ? "text-[#B88A4F]"
+                        : "text-gray-600 dark:text-gray-400"
                   }`}
                 />
                 <span
                   className={`text-sm font-medium ${
-                    isHighlighted
-                      ? "text-[#0F4C5C] dark:text-[#B88A4F] font-semibold"
-                      : "text-gray-700 dark:text-gray-300"
+                    isClubExclusive
+                      ? "text-[#0F4C5C] dark:text-[#B88A4F] font-bold"
+                      : isHighlighted
+                        ? "text-[#0F4C5C] dark:text-[#B88A4F] font-semibold"
+                        : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   {item.label}
@@ -186,11 +203,13 @@ export default function UserMenuPopup({
               {item.badge && (
                 <span
                   className={`text-xs px-2 py-1 rounded-full ${
-                    isHighlighted
-                      ? "bg-linear-to-r from-[#0F4C5C] to-[#B88A4F] text-white"
-                      : item.badge === "Premium"
-                        ? "bg-linear-to-r from-[#B88A4F] to-[#FF5A5F] text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    isClubExclusive
+                      ? "bg-linear-to-r from-[#0F4C5C] to-[#0A3A47] text-white font-semibold"
+                      : isHighlighted
+                        ? "bg-linear-to-r from-[#0F4C5C] to-[#B88A4F] text-white"
+                        : item.badge === "Premium"
+                          ? "bg-linear-to-r from-[#B88A4F] to-[#FF5A5F] text-white"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {item.badge}
@@ -201,7 +220,7 @@ export default function UserMenuPopup({
         })}
       </div>
 
-      {/* Footer avec les liens légaux seulement */}
+      {/* Footer avec les liens légaux */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 justify-center">
           <Link
