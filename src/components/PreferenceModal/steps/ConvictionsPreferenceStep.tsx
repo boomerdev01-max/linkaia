@@ -117,7 +117,7 @@ export default function ConvictionsPreferenceStep({
           {/* Aime les animaux */}
           <div>
             <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-6">
-              Amour des animaux recherché
+              Personnes aimant les animaux
             </h2>
             <div className="space-y-3">
               {LOVE_ANIMALS_OPTIONS.map((option) => (

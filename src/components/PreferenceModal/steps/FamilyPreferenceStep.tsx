@@ -1,5 +1,9 @@
 // src/components/PreferenceModal/steps/FamilyPreferenceStep.tsx
-import { HAS_CHILDREN_OPTIONS, WANTS_CHILDREN_OPTIONS, HAS_PETS_OPTIONS } from "../types";
+import {
+  HAS_CHILDREN_OPTIONS,
+  WANTS_CHILDREN_OPTIONS,
+  HAS_PETS_OPTIONS,
+} from "../types";
 
 interface FamilyPreferenceStepProps {
   hasChildrenPreference: string;
@@ -24,8 +28,15 @@ export default function FamilyPreferenceStep({
       <div className="relative h-85.75 w-full bg-linear-to-br from-secondary via-primary/50 to-accent overflow-hidden shrink-0">
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="relative w-full h-full max-w-md">
-            <div className="text-7xl absolute top-1/4 left-1/4 animate-bounce">👨‍👩‍👧‍👦</div>
-            <div className="text-6xl absolute bottom-1/3 right-1/4 animate-pulse" style={{ animationDelay: "0.4s" }}>🐕</div>
+            <div className="text-7xl absolute top-1/4 left-1/4 animate-bounce">
+              👨‍👩‍👧‍👦
+            </div>
+            <div
+              className="text-6xl absolute bottom-1/3 right-1/4 animate-pulse"
+              style={{ animationDelay: "0.4s" }}
+            >
+              🐕
+            </div>
           </div>
         </div>
       </div>
@@ -49,7 +60,9 @@ export default function FamilyPreferenceStep({
                   }`}
                   onClick={() => onHasChildrenChange(option.id)}
                 >
-                  <span className="text-lg font-medium text-gray-800">{option.label}</span>
+                  <span className="text-lg font-medium text-gray-800">
+                    {option.label}
+                  </span>
                   <div
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                       hasChildrenPreference === option.id
@@ -82,7 +95,9 @@ export default function FamilyPreferenceStep({
                   }`}
                   onClick={() => onWantsChildrenChange(option.id)}
                 >
-                  <span className="text-lg font-medium text-gray-800">{option.label}</span>
+                  <span className="text-lg font-medium text-gray-800">
+                    {option.label}
+                  </span>
                   <div
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                       wantsChildrenPreference === option.id
@@ -102,7 +117,7 @@ export default function FamilyPreferenceStep({
           {/* Animaux */}
           <div>
             <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-6">
-              Possession d'animaux recherchée
+              Possession d'animaux
             </h2>
             <div className="space-y-3">
               {HAS_PETS_OPTIONS.map((option) => (
@@ -115,7 +130,9 @@ export default function FamilyPreferenceStep({
                   }`}
                   onClick={() => onHasPetsChange(option.id)}
                 >
-                  <span className="text-lg font-medium text-gray-800">{option.label}</span>
+                  <span className="text-lg font-medium text-gray-800">
+                    {option.label}
+                  </span>
                   <div
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                       hasPetsPreference === option.id
