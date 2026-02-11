@@ -17,13 +17,13 @@ export default function RelationshipStep({ value, onSelect }: RelationshipStepPr
   return (
     <>
       {/* Hero Image - Relationship */}
-      <div className="relative h-[343px] w-full bg-gradient-to-br from-secondary via-accent/60 to-primary overflow-hidden flex-shrink-0">
+      <div className="relative h-85.75 w-full bg-linear-to-br from-secondary via-accent/60 to-primary overflow-hidden shrink-0">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-full h-full flex items-center justify-center p-8">
             {/* Illustration abstraite style Badoo */}
             <div className="relative w-full h-full max-w-md">
               {/* Forme 1 - Visage gauche */}
-              <div className="absolute left-0 top-1/4 w-48 h-48 bg-gradient-to-br from-secondary to-secondary/80 rounded-tl-[80px] rounded-tr-[20px] rounded-bl-[40px] rounded-br-[100px] transform -rotate-6">
+              <div className="absolute left-0 top-1/4 w-48 h-48 bg-linear-to-br from-secondary to-secondary/80 rounded-tl-[80px] rounded-tr-4xl rounded-bl-[40px] rounded-br-[100px] transform -rotate-6">
                 {/* Col rouge */}
                 <div
                   className="absolute -bottom-8 left-8 w-24 h-20 bg-accent rounded-[40px] border-4 border-white"
@@ -32,7 +32,7 @@ export default function RelationshipStep({ value, onSelect }: RelationshipStepPr
               </div>
 
               {/* Forme 2 - Visage droit */}
-              <div className="absolute right-8 top-1/4 w-56 h-48 bg-gradient-to-br from-primary to-primary-dark rounded-[30px] transform rotate-3">
+              <div className="absolute right-8 top-1/4 w-56 h-48 bg-linear-to-br from-primary to-primary-dark rounded-[30px] transform rotate-3">
                 {/* Yeux */}
                 <div className="absolute top-12 left-8 w-16 h-12 bg-white rounded-full flex items-center justify-center">
                   <div className="w-8 h-10 bg-black rounded-full" />
@@ -43,8 +43,8 @@ export default function RelationshipStep({ value, onSelect }: RelationshipStepPr
               </div>
 
               {/* Formes décoratives */}
-              <div className="absolute top-8 left-1/3 w-32 h-24 bg-primary/60 rounded-[20px] transform -rotate-12" />
-              <div className="absolute top-4 right-12 w-40 h-32 bg-accent rounded-tl-[60px] rounded-tr-[20px] rounded-br-[40px] transform rotate-12" />
+              <div className="absolute top-8 left-1/3 w-32 h-24 bg-primary/60 rounded-4xl transform -rotate-12" />
+              <div className="absolute top-4 right-12 w-40 h-32 bg-accent rounded-tl-[60px] rounded-tr-4xl rounded-br-[40px] transform rotate-12" />
 
               {/* Motifs décoratifs */}
               <div className="absolute bottom-16 right-4 flex flex-col gap-2">
@@ -70,7 +70,7 @@ export default function RelationshipStep({ value, onSelect }: RelationshipStepPr
       </div>
 
       {/* Form Content */}
-      <div className="px-8 pt-[22px] pb-10">
+      <div className="px-8 pt-5.5 pb-10">
         <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-6">
           Quelle est votre situation amoureuse ?
         </h2>
@@ -79,7 +79,7 @@ export default function RelationshipStep({ value, onSelect }: RelationshipStepPr
           {relationshipOptions.map((option) => (
             <div
               key={option.id}
-              className={`flex items-center justify-between px-6 py-[13px] h-[50px] rounded-full cursor-pointer transition-all duration-200 border-2 ${
+              className={`flex items-center justify-between px-6 py-3.25 h-12.5 rounded-full cursor-pointer transition-all duration-200 border-2 ${
                 value === option.id
                   ? "bg-primary/10 border-primary"
                   : "bg-gray-50 border-transparent hover:bg-gray-100"

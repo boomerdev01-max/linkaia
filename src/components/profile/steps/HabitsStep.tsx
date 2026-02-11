@@ -1,5 +1,4 @@
 import { Option } from "@/components/ModalSteps/types";
-
 interface HabitsStepProps {
   smoker: string;
   alcohol: string;
@@ -16,7 +15,7 @@ const smokerOptions: Option[] = [
 
 const alcoholOptions: Option[] = [
   { id: "never", label: "Jamais" },
-  { id: "socially", label: "En société" },
+  { id: "socially", label: "Occasionnel" },
   { id: "regularly", label: "Régulièrement" },
   { id: "PREFER_NOT_TO_SAY", label: "Je préfère ne pas le dire" },
 ];

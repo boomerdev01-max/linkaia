@@ -40,11 +40,15 @@ Linkaïa
 │   │   │   ├── layout.tsx
 │   │   │   ├── page.tsx
 │   │   │   └── users
-│   │   │       └── profiles
+│   │   │       ├── profiles
+│   │   │       │   └── page.tsx
+│   │   │       └── roles
 │   │   │           └── page.tsx
 │   │   ├── api
 │   │   │   ├── admin
 │   │   │   │   ├── dashboard
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── roles
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── users
 │   │   │   │       └── route.ts
@@ -90,6 +94,15 @@ Linkaïa
 │   │   │   │   ├── unread-count
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── upload
+│   │   │   │       └── route.ts
+│   │   │   ├── club
+│   │   │   │   ├── cancel
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── checkout
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── current
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── webhook
 │   │   │   │       └── route.ts
 │   │   │   ├── comments
 │   │   │   │   ├── [id]
@@ -169,6 +182,12 @@ Linkaïa
 │   │   ├── chat
 │   │   │   ├── ChatClient.tsx
 │   │   │   └── page.tsx
+│   │   ├── club
+│   │   │   ├── checkout
+│   │   │   │   └── page.tsx
+│   │   │   ├── page.tsx
+│   │   │   └── settings
+│   │   │       └── page.tsx
 │   │   ├── favicon.ico
 │   │   ├── globals.css
 │   │   ├── home
@@ -227,10 +246,10 @@ Linkaïa
 │   │   │   │   └── ResidencePreferenceStep.tsx
 │   │   │   └── types.ts
 │   │   ├── SearchResults.tsx
-│   │   ├── UserProfileButton.tsx
 │   │   ├── admin
 │   │   │   ├── AdminHeader.tsx
 │   │   │   ├── AdminSidebar.tsx
+│   │   │   ├── RolesClient.tsx
 │   │   │   └── UserProfilesClient.tsx
 │   │   ├── auth
 │   │   │   ├── CompanyDocumentsUpload.tsx
@@ -248,7 +267,10 @@ Linkaïa
 │   │   │   ├── MessageInput.tsx
 │   │   │   ├── TypingIndicator.tsx
 │   │   │   └── UserSearchModal.tsx
-│   │   ├── chat-message.tsx
+│   │   ├── club
+│   │   │   ├── ClubBadge.tsx
+│   │   │   ├── ClubCheckoutContent.tsx
+│   │   │   └── ClubPageContent.tsx
 │   │   ├── comments
 │   │   │   ├── CommentInput.tsx
 │   │   │   ├── CommentItem.tsx
@@ -295,7 +317,6 @@ Linkaïa
 │   │   ├── reactions
 │   │   │   ├── ReactionButton.tsx
 │   │   │   └── ReactionPicker.tsx
-│   │   ├── realtime-chat.tsx
 │   │   ├── suggestions
 │   │   │   ├── SuggestionsClient.tsx
 │   │   │   └── UpgradeBanners.tsx
@@ -309,65 +330,6 @@ Linkaïa
 │   │       ├── select.tsx
 │   │       ├── sonner.tsx
 │   │       └── tabs.tsx
-│   ├── generated
-│   │   └── prisma
-│   │       ├── browser.ts
-│   │       ├── client.ts
-│   │       ├── commonInputTypes.ts
-│   │       ├── enums.ts
-│   │       ├── internal
-│   │       │   ├── class.ts
-│   │       │   ├── prismaNamespace.ts
-│   │       │   └── prismaNamespaceBrowser.ts
-│   │       ├── models
-│   │       │   ├── Action.ts
-│   │       │   ├── City.ts
-│   │       │   ├── Comment.ts
-│   │       │   ├── CompanyProfile.ts
-│   │       │   ├── Conversation.ts
-│   │       │   ├── ConversationParticipant.ts
-│   │       │   ├── Currency.ts
-│   │       │   ├── Friendship.ts
-│   │       │   ├── Interest.ts
-│   │       │   ├── InterestCategory.ts
-│   │       │   ├── MatchScore.ts
-│   │       │   ├── Menu.ts
-│   │       │   ├── MenuPermission.ts
-│   │       │   ├── Message.ts
-│   │       │   ├── MessageMedia.ts
-│   │       │   ├── MessageReaction.ts
-│   │       │   ├── MessageReadReceipt.ts
-│   │       │   ├── Nationality.ts
-│   │       │   ├── Notification.ts
-│   │       │   ├── Permission.ts
-│   │       │   ├── PermissionAction.ts
-│   │       │   ├── Post.ts
-│   │       │   ├── PostMedia.ts
-│   │       │   ├── Preference.ts
-│   │       │   ├── PreferenceCity.ts
-│   │       │   ├── PreferenceInterest.ts
-│   │       │   ├── PreferenceNationality.ts
-│   │       │   ├── Profil.ts
-│   │       │   ├── ProfilInterest.ts
-│   │       │   ├── ProfilNationalite.ts
-│   │       │   ├── ProfileLike.ts
-│   │       │   ├── Reaction.ts
-│   │       │   ├── ReactionType.ts
-│   │       │   ├── Report.ts
-│   │       │   ├── ReportCategory.ts
-│   │       │   ├── Review.ts
-│   │       │   ├── Role.ts
-│   │       │   ├── RolePermission.ts
-│   │       │   ├── StripeCustomer.ts
-│   │       │   ├── StripeInvoice.ts
-│   │       │   ├── StripePaymentMethod.ts
-│   │       │   ├── SubscriptionFeature.ts
-│   │       │   ├── SubscriptionHistory.ts
-│   │       │   ├── SubscriptionType.ts
-│   │       │   ├── User.ts
-│   │       │   ├── UserRole.ts
-│   │       │   └── UserSubscription.ts
-│   │       └── models.ts
 │   ├── hooks
 │   │   ├── use-auto-save.ts
 │   │   ├── use-conversations.ts
@@ -393,6 +355,7 @@ Linkaïa
 │   │   ├── redirect-logic.ts
 │   │   ├── roles-config.ts
 │   │   ├── server.ts
+│   │   ├── stripe-club.ts
 │   │   ├── stripe.ts
 │   │   ├── supabase
 │   │   │   ├── admin-client.ts
@@ -408,8 +371,8 @@ Linkaïa
 │   ├── types
 │   │   └── chat.ts
 │   └── utils
-│       └── envfile.txt
 ├── tailwind.config.ts
 └── tsconfig.json
 
-128 directories, 285 files
+135 directories, 240 files
+

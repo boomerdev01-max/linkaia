@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Shield,
   Users,
@@ -11,6 +12,7 @@ import {
   Filter,
   Calendar,
   AlertCircle,
+  Settings,
 } from "lucide-react";
 
 interface Role {
@@ -25,6 +27,7 @@ interface Role {
 }
 
 export default function RolesClient() {
+  const router = useRouter();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>("all"); // "all" | "true" | "false"
@@ -151,6 +154,14 @@ export default function RolesClient() {
           </h2>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/admin/users/roles/manage")}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0F4C5C] text-white rounded-lg hover:bg-[#0F4C5C]/90 transition-colors font-medium"
+            >
+              <Settings className="h-5 w-5" />
+              Gérer les rôles
+            </button>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -312,7 +323,11 @@ export default function RolesClient() {
                               Créé:{" "}
                               {new Date(role.createdAt).toLocaleDateString(
                                 "fr-FR",
-                                { day: "2-digit", month: "short", year: "numeric" }
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                },
                               )}
                             </span>
                           </div>
@@ -321,7 +336,11 @@ export default function RolesClient() {
                               Modifié:{" "}
                               {new Date(role.updatedAt).toLocaleDateString(
                                 "fr-FR",
-                                { day: "2-digit", month: "short", year: "numeric" }
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                },
                               )}
                             </span>
                           </div>

@@ -1,16 +1,16 @@
-// src/app/admin/users/roles/page.tsx
+// src/app/admin/users/roles/manage/page.tsx
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
 import AdminHeader from "@/components/admin/AdminHeader";
-import RolesClient from "@/components/admin/RolesClient";
+import RoleManagementClient from "@/components/admin/roles/RoleManagementClient";
 
 export const metadata = {
-  title: "Rôles et permissions - Administration",
-  description: "Gestion des rôles utilisateurs et permissions",
+  title: "Gestion des Rôles - Administration",
+  description: "Créer, modifier et gérer les rôles utilisateurs",
 };
 
-export default async function RolesPage() {
+export default async function RoleManagementPage() {
   // 🔐 Vérifier l'authentification
   const supabase = await createSupabaseServerClient();
   const {
@@ -44,15 +44,15 @@ export default async function RolesPage() {
   return (
     <div>
       <AdminHeader
-        title="Rôles et permissions"
-        description=""
+        title="Gestion des Rôles"
+        description="Créer, modifier et gérer les rôles utilisateurs"
         userName={`${user.prenom} ${user.nom}`}
         userEmail={user.email}
         userImage={user.profil?.profilePhotoUrl ?? null}
         notificationCount={0}
       />
 
-      <RolesClient />
+      <RoleManagementClient />
     </div>
   );
 }

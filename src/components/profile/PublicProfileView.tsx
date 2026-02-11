@@ -117,7 +117,7 @@ export default function PublicProfileView({
       never: "Jamais",
       sometimes: "Occasionnellement",
       regularly: "Régulièrement",
-      socially: "En société",
+      socially: "Occasionnel",
       yes: "Oui",
       no: "Non",
       soon: "Bientôt",
