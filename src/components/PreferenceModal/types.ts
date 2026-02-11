@@ -120,7 +120,7 @@ export const SMOKER_OPTIONS: Option[] = [
 
 export const ALCOHOL_OPTIONS: Option[] = [
   { id: "never", label: "Jamais" },
-  { id: "socially", label: "En société" },
+  { id: "socially", label: "Occasionnel" },
   { id: "regularly", label: "Régulièrement" },
   { id: "any", label: "Peu importe" },
 ];

@@ -425,7 +425,7 @@ const menuFinance = await prisma.menu.upsert({
   });
 
   await prisma.menu.upsert({
-    where: { name: "Rôles & Permissions" },
+    where: { name: "Rôles et permissions" },
     update: {
       path: "/admin/users/roles",
       icon: "Shield",
@@ -433,7 +433,7 @@ const menuFinance = await prisma.menu.upsert({
       order: 2,
     },
     create: {
-      name: "Rôles & Permissions",
+      name: "Rôles et permissions",
       path: "/admin/users/roles",
       icon: "Shield",
       parentId: menuUsers.id,

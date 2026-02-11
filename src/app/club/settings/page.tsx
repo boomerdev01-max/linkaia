@@ -163,7 +163,7 @@ export default function ClubSettingsPage() {
 
       {/* Subscription Card */}
       <Card className="mb-8 border-[#0F4C5C]/20 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-[#0F4C5C]/5 to-[#0A3A47]/5">
+        <CardHeader className="bg-linear-to-r from-[#0F4C5C]/5 to-[#0A3A47]/5">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-2xl">

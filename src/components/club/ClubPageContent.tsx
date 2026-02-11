@@ -149,7 +149,7 @@ export default function ClubPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-linear-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Success Banner */}
       {success === "true" && (
         <div className="bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 p-4">
@@ -169,7 +169,7 @@ export default function ClubPage() {
       <div className="container mx-auto px-4 py-12 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-[#0F4C5C] to-[#0A3A47] text-white px-6 py-3 rounded-full mb-6 shadow-lg">
+          <div className="inline-flex items-center gap-3 bg-linear-to-r from-[#0F4C5C] to-[#0A3A47] text-white px-6 py-3 rounded-full mb-6 shadow-lg">
             <Crown className="w-6 h-6" />
             <span className="font-bold text-lg">Membre du Club fermé LWB</span>
           </div>
@@ -186,7 +186,7 @@ export default function ClubPage() {
         {/* Subscription Info */}
         {subscription && (
           <Card className="mb-8 border-[#0F4C5C]/20 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-[#0F4C5C]/5 to-[#0A3A47]/5">
+            <CardHeader className="bg-linear-to-r from-[#0F4C5C]/5 to-[#0A3A47]/5">
               <CardTitle className="flex items-center gap-2">
                 <Crown className="w-5 h-5 text-[#0F4C5C]" />
                 Votre Abonnement
@@ -258,7 +258,7 @@ export default function ClubPage() {
             >
               <CardHeader>
                 <div
-                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${section.color} flex items-center justify-center mb-4 shadow-lg`}
+                  className={`w-14 h-14 rounded-xl bg-linear-to-br ${section.color} flex items-center justify-center mb-4 shadow-lg`}
                 >
                   <section.icon className="w-7 h-7 text-white" />
                 </div>
@@ -274,7 +274,7 @@ export default function ClubPage() {
                       key={itemIdx}
                       className="flex items-start gap-2 text-sm"
                     >
-                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
                       <span className="text-gray-700 dark:text-gray-300">
                         {item}
                       </span>
@@ -291,7 +291,7 @@ export default function ClubPage() {
         </div>
 
         {/* Coming Soon Notice */}
-        <Card className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
+        <Card className="mt-8 bg-linear-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6">
             <div className="text-center">
               <Zap className="w-12 h-12 text-blue-600 dark:text-blue-400 mx-auto mb-4" />

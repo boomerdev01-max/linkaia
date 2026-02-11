@@ -30,7 +30,7 @@ export function ClubBadge({
   return (
     <Badge
       className={`
-        bg-gradient-to-r from-[#0F4C5C] to-[#0A3A47]
+        bg-linear-to-r from-[#0F4C5C] to-[#0A3A47]
         hover:from-[#0a3540] hover:to-[#082830]
         text-white
         border-none

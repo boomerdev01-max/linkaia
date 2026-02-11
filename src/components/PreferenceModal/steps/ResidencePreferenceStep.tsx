@@ -59,7 +59,7 @@ export default function ResidencePreferenceStep({
       {/* Form Content — suit directement en dessous, même padding que les autres */}
       <div className="px-8 pt-5.5 pb-10">
         <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-2">
-          Résidence recherchée
+          Lieu de ésidence recherchée
         </h2>
         <p className="text-sm text-gray-600 mb-6">
           {isAnySelected
