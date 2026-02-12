@@ -1,188 +1,218 @@
 // src/components/PreferenceModal/types.ts
 
-import {
-  InterestCategory,
-  Nationality,
-  City,
-} from "@/components/ModalSteps/types";
-
 export interface PreferenceFormData {
-  // Step 1: Genre & Âge
-  genderPreference: string; // "man" | "woman" | "non-binary" | "both" | "any"
+  // === GENRE & ÂGE (Step 1) ===
+  selectedGenderCodes: string[]; // ✅ NOUVEAU : multi-choix ["man", "woman", "non-binary"]
   ageMin: number;
   ageMax: number;
 
-  // Step 2: Apparence
+  // === APPARENCE (Step 2) ===
   heightMin: number;
   heightMax: number;
   weightMin: number;
   weightMax: number;
-  skinTonePreference: string; // "very-light" | "light" | "medium" | "tanned" | "brown" | "dark" | "any"
+  selectedSkinToneIds: string[]; // ✅ NOUVEAU : multi-choix
 
-  // Step 3: Statut & Orientation
-  relationshipStatusPreference: string; // "single" | "couple" | "complicated" | "open" | "any"
-  sexualOrientationPreference: string; // "hetero" | "homo" | "bi" | "pan" | "asexual" | "any"
+  // === STATUT & ORIENTATION (Step 3) ===
+  selectedRelationshipStatusIds: string[]; // ✅ NOUVEAU : multi-choix
+  selectedSexualOrientationIds: string[]; // ✅ NOUVEAU : multi-choix
 
-  // Step 4: Centres d'intérêt
-  selectedInterestIds: string[]; // Max 10 ou vide pour "any"
+  // === CENTRES D'INTÉRÊT (Step 4) ===
+  selectedInterestIds: string[];
 
-  // Step 5: Éducation
-  educationLevelPreference: string; // "high-school" | "bachelor" | "master" | "doctorate" | "any"
+  // === ÉDUCATION (Step 5) ===
+  selectedEducationLevelIds: string[]; // ✅ NOUVEAU : multi-choix
 
-  // Step 6: Origines
-  countryOriginPreference: string; // "any" ou code pays
-  selectedNationalityIds: string[];
+  // === ORIGINES (Step 6) ===
+  selectedNationalityCodes: string[]; // ✅ FIXÉ : utilise countryCode au lieu de ID
 
-  // Step 7: Résidence
-  countryResidencePreference: string; // "any" ou code pays
+  // === RÉSIDENCE (Step 7) ===
+  selectedResidenceCountryCodes: string[]; // ✅ FIXÉ : utilise countryCode
   selectedCityIds: string[];
 
-  // Step 8: Habitudes
-  smokerPreference: string; // "never" | "sometimes" | "regularly" | "any"
-  alcoholPreference: string; // "never" | "socially" | "regularly" | "any"
+  // === HABITUDES (Step 8) ===
+  smokerPreference: string;
+  alcoholPreference: string;
 
-  // Step 9: Projet familial
-  hasChildrenPreference: string; // "yes" | "no" | "soon" | "any"
-  wantsChildrenPreference: string; // "yes" | "no" | "maybe" | "any"
-  hasPetsPreference: string; // "yes" | "no" | "want-one" | "any"
+  // === PROJET FAMILIAL (Step 9) ===
+  hasChildrenPreference: string;
+  wantsChildrenPreference: string;
+  hasPetsPreference: string;
 
-  // Step 10: Personnalité
-  personalityTypePreference: string; // "introvert" | "extrovert" | "ambivert" | "any"
+  // === PERSONNALITÉ (Step 10) ===
+  selectedPersonalityTypeIds: string[]; // ✅ NOUVEAU : multi-choix
 
-  // Step 11: Convictions
-  zodiacSignPreference: string; // "aries" | "taurus" | ... | "any"
-  religionPreference: string; // "atheist" | "christian" | "muslim" | ... | "any"
-  loveAnimalsPreference: string; // "yes" | "no" | "neutral" | "any"
+  // === CONVICTIONS (Step 11) ===
+  selectedZodiacSignIds: string[]; // ✅ NOUVEAU : multi-choix
+  selectedReligionIds: string[]; // ✅ NOUVEAU : multi-choix
+  loveAnimalsPreference: string;
 }
 
+// ============================================
+// TYPES POUR LES DONNÉES DE RÉFÉRENCE
+// ============================================
+
 export interface ReferenceData {
+  religions: Religion[];
+  zodiacSigns: ZodiacSign[];
+  sexualOrientations: SexualOrientation[];
+  relationshipStatuses: RelationshipStatus[];
+  skinTones: SkinTone[];
+  personalityTypes: PersonalityType[];
+  educationLevels: EducationLevel[];
   interestCategories: InterestCategory[];
   cities: City[];
   nationalities: Nationality[];
 }
 
-export interface Option {
+export interface Religion {
   id: string;
+  code: string;
   label: string;
-  emoji?: string;
+  emoji: string;
+  order: number;
 }
 
-// Options communes
-export const GENDER_OPTIONS: Option[] = [
-  { id: "man", label: "Homme" },
-  { id: "woman", label: "Femme" },
-  { id: "non-binary", label: "Non-binaire" },
-  { id: "both", label: "Homme et Femme" },
-  { id: "any", label: "Peu importe" },
+export interface ZodiacSign {
+  id: string;
+  code: string;
+  label: string;
+  emoji: string;
+  order: number;
+}
+
+export interface SexualOrientation {
+  id: string;
+  code: string;
+  label: string;
+  emoji: string;
+  order: number;
+}
+
+export interface RelationshipStatus {
+  id: string;
+  code: string;
+  label: string;
+  emoji: string;
+  order: number;
+}
+
+export interface SkinTone {
+  id: string;
+  code: string;
+  label: string;
+  emoji: string;
+  order: number;
+}
+
+export interface PersonalityType {
+  id: string;
+  code: string;
+  label: string;
+  emoji: string;
+  order: number;
+}
+
+export interface EducationLevel {
+  id: string;
+  code: string;
+  label: string;
+  emoji: string;
+  order: number;
+}
+
+export interface InterestCategory {
+  id: string;
+  name: string;
+  emoji: string;
+  interests: Interest[];
+}
+
+export interface Interest {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
+export interface City {
+  id: string;
+  name: string;
+  stateCode: string;
+  stateName: string;
+  countryCode: string;
+  countryName: string;
+  displayName: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface Nationality {
+  id: string;
+  code: string; // ✅ Code ISO (ex: "FR")
+  nameFr: string;
+  nameEn: string;
+  flag: string;
+}
+
+// ============================================
+// GENRE OPTIONS (hardcodé car simple)
+// ============================================
+export const GENDER_OPTIONS = [
+  { code: "man", label: "Homme", emoji: "👨" },
+  { code: "woman", label: "Femme", emoji: "👩" },
+  { code: "non-binary", label: "Non-binaire", emoji: "🧑" },
 ];
 
-export const SKIN_TONE_OPTIONS: Option[] = [
-  { id: "very-light", label: "Peau très claire" },
-  { id: "light", label: "Peau claire" },
-  { id: "medium", label: "Peau médium" },
-  { id: "tanned", label: "Peau bronzée" },
-  { id: "brown", label: "Peau brune" },
-  { id: "dark", label: "Peau noire" },
-  { id: "any", label: "Peu importe" },
+// ============================================
+// OPTIONS POUR HABITS (Step 8)
+// ============================================
+
+export const SMOKER_OPTIONS = [
+  { id: "non_smoker", label: "Non fumeur" },
+  { id: "occasional", label: "Fumeur occasionnel" },
+  { id: "regular_smoker", label: "Fumeur régulier" },
+  { id: "no_preference", label: "Peu importe" },
 ];
 
-export const RELATIONSHIP_STATUS_OPTIONS: Option[] = [
-  { id: "single", label: "Célibataire" },
-  { id: "couple", label: "En couple" },
-  { id: "complicated", label: "C'est compliqué" },
-  { id: "open", label: "En relation libre" },
-  { id: "any", label: "Peu importe" },
+export const ALCOHOL_OPTIONS = [
+  { id: "non_drinker", label: "Ne boit pas" },
+  { id: "occasional", label: "Boit occasionnellement" },
+  { id: "social_drinker", label: "Boit en société" },
+  { id: "regular_drinker", label: "Boit régulièrement" },
+  { id: "no_preference", label: "Peu importe" },
 ];
 
-export const SEXUAL_ORIENTATION_OPTIONS: Option[] = [
-  { id: "hetero", label: "Hétérosexuel(le)" },
-  { id: "homo", label: "Homosexuel(le)" },
-  { id: "bi", label: "Bisexuel(le)" },
-  { id: "pan", label: "Pansexuel(le)" },
-  { id: "asexual", label: "Asexuel(le)" },
-  { id: "any", label: "Peu importe" },
+// ============================================
+// OPTIONS POUR PROJET FAMILIAL & ANIMAUX (Step 9)
+// ============================================
+
+export const HAS_CHILDREN_OPTIONS = [
+  { id: "has_children", label: "A des enfants" },
+  { id: "no_children", label: "N'a pas d'enfants" },
+  { id: "no_preference", label: "Peu importe" },
 ];
 
-export const EDUCATION_LEVEL_OPTIONS: Option[] = [
-  { id: "high-school", label: "Lycée" },
-  { id: "bachelor", label: "Licence / Bachelor" },
-  { id: "master", label: "Master" },
-  { id: "doctorate", label: "Doctorat" },
-  { id: "any", label: "Peu importe" },
+export const WANTS_CHILDREN_OPTIONS = [
+  { id: "wants_children", label: "Veut des enfants" },
+  { id: "does_not_want", label: "Ne veut pas d'enfants" },
+  { id: "maybe_open", label: "Ouvert·e à discussion" },
+  { id: "no_preference", label: "Peu importe" },
 ];
 
-export const SMOKER_OPTIONS: Option[] = [
-  { id: "never", label: "Jamais" },
-  { id: "sometimes", label: "Parfois" },
-  { id: "regularly", label: "Régulièrement" },
-  { id: "any", label: "Peu importe" },
+export const HAS_PETS_OPTIONS = [
+  { id: "has_pets", label: "A des animaux" },
+  { id: "no_pets", label: "N'a pas d'animaux" },
+  { id: "no_preference", label: "Peu importe" },
 ];
 
-export const ALCOHOL_OPTIONS: Option[] = [
-  { id: "never", label: "Jamais" },
-  { id: "socially", label: "Occasionnel" },
-  { id: "regularly", label: "Régulièrement" },
-  { id: "any", label: "Peu importe" },
-];
+// ============================================
+// OPTIONS POUR AMOUR DES ANIMAUX
+// ============================================
 
-export const HAS_CHILDREN_OPTIONS: Option[] = [
-  { id: "yes", label: "Oui" },
-  { id: "no", label: "Non" },
-  { id: "soon", label: "Bientôt" },
-  { id: "any", label: "Peu importe" },
-];
-
-export const WANTS_CHILDREN_OPTIONS: Option[] = [
-  { id: "yes", label: "Oui" },
-  { id: "no", label: "Non" },
-  { id: "maybe", label: "Peut-être" },
-  { id: "any", label: "Peu importe" },
-];
-
-export const HAS_PETS_OPTIONS: Option[] = [
-  { id: "yes", label: "Oui" },
-  { id: "no", label: "Non" },
-  { id: "want-one", label: "J'en veux un" },
-  { id: "any", label: "Peu importe" },
-];
-
-export const PERSONALITY_OPTIONS: Option[] = [
-  { id: "introvert", label: "Introverti(e)" },
-  { id: "extrovert", label: "Extraverti(e)" },
-  { id: "ambivert", label: "Ambivert(e)" },
-  { id: "any", label: "Peu importe" },
-];
-
-export const ZODIAC_OPTIONS: Option[] = [
-  { id: "aries", label: "♈ Bélier" },
-  { id: "taurus", label: "♉ Taureau" },
-  { id: "gemini", label: "♊ Gémeaux" },
-  { id: "cancer", label: "♋ Cancer" },
-  { id: "leo", label: "♌ Lion" },
-  { id: "virgo", label: "♍ Vierge" },
-  { id: "libra", label: "♎ Balance" },
-  { id: "scorpio", label: "♏ Scorpion" },
-  { id: "sagittarius", label: "♐ Sagittaire" },
-  { id: "capricorn", label: "♑ Capricorne" },
-  { id: "aquarius", label: "♒ Verseau" },
-  { id: "pisces", label: "♓ Poissons" },
-  { id: "any", label: "Peu importe" },
-];
-
-export const RELIGION_OPTIONS: Option[] = [
-  { id: "atheist", label: "Athée" },
-  { id: "christian", label: "Chrétien(ne)" },
-  { id: "muslim", label: "Musulman(e)" },
-  { id: "jewish", label: "Juif/Juive" },
-  { id: "buddhist", label: "Bouddhiste" },
-  { id: "hindu", label: "Hindou(e)" },
-  { id: "other", label: "Autre" },
-  { id: "any", label: "Peu importe" },
-];
-
-export const LOVE_ANIMALS_OPTIONS: Option[] = [
-  { id: "yes", label: "Oui" },
-  { id: "no", label: "Non" },
+export const LOVE_ANIMALS_OPTIONS = [
+  { id: "loves_animals", label: "Adore les animaux" },
+  { id: "likes_animals", label: "Aime bien les animaux" },
   { id: "neutral", label: "Neutre" },
-  { id: "any", label: "Peu importe" },
+  { id: "dislikes_animals", label: "N'aime pas les animaux" },
+  { id: "no_preference", label: "Peu importe" },
 ];

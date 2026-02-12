@@ -846,7 +846,7 @@ export default function HomePage() {
           </div>
           <div className="border-t border-border pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2025 Linkaïa Inc. All rights reserved.
+              © 2026 Linkaïa Inc. All rights reserved.
             </p>
             <div className="flex gap-4">
               <span className="text-sm text-muted-foreground">

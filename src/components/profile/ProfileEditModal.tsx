@@ -41,7 +41,7 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingManually, setIsSavingManually] = useState(false);
 
-  // Form data
+  // Form data (✨ MISE À JOUR)
   const [formData, setFormData] = useState<ProfileFormData>({
     // Step 1
     pseudo: "",
@@ -66,12 +66,12 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
     // Step 8
     jobTitle: "",
     companyName: "",
-    // Step 9 - Origins
-    countryOrigin: "",
-    selectedNationalityIds: [],
-    // Step 10 - Residence
-    countryResidence: "",
-    location: "",
+    // Step 9 - Origins (✨ MISE À JOUR)
+    countryOriginCode: null,
+    selectedNationalityCodes: [],
+    // Step 10 - Residence (✨ MISE À JOUR)
+    countryResidenceCode: null,
+    cityId: null,
     // Step 11 - Habits
     smoker: "",
     alcohol: "",
@@ -93,7 +93,7 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
     nationalities: [],
   });
 
-  // Auto-save callback
+  // Auto-save callback (✨ MISE À JOUR)
   const saveProfile = useCallback(async (data: ProfileFormData) => {
     try {
       await fetch("/api/profile/update", {
@@ -117,19 +117,24 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
           studyPlace: data.studyPlace || undefined,
           jobTitle: data.jobTitle || undefined,
           companyName: data.companyName || undefined,
-          countryOrigin: data.countryOrigin || undefined,
-          nationalityIds:
-            data.selectedNationalityIds.length > 0
-              ? data.selectedNationalityIds
+          // Step 9 (✨ MISE À JOUR)
+          countryOriginCode: data.countryOriginCode || undefined,
+          nationalityCodes:
+            data.selectedNationalityCodes.length > 0
+              ? data.selectedNationalityCodes
               : undefined,
-          countryResidence: data.countryResidence || undefined,
-          location: data.location || undefined,
+          // Step 10 (✨ MISE À JOUR)
+          countryResidenceCode: data.countryResidenceCode || undefined,
+          cityId: data.cityId || undefined,
+          // Step 11
           smoker: data.smoker || undefined,
           alcohol: data.alcohol || undefined,
+          // Step 12
           hasChildren: data.hasChildren || undefined,
           wantsChildren: data.wantsChildren || undefined,
           hasPets: data.hasPets || undefined,
           personalityType: data.personalityType || undefined,
+          // Step 13
           zodiacSign: data.zodiacSign || undefined,
           religion: data.religion || undefined,
           loveAnimals: data.loveAnimals || undefined,
@@ -144,7 +149,7 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
   // Auto-save with debounce
   const { isSaving } = useAutoSave(formData, saveProfile, 2000);
 
-  // Load initial data
+  // Load initial data (✨ MISE À JOUR)
   useEffect(() => {
     async function loadData() {
       try {
@@ -178,17 +183,24 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
             studyPlace: profile.studyPlace || "",
             jobTitle: profile.jobTitle || "",
             companyName: profile.companyName || "",
-            countryOrigin: profile.countryOrigin || "",
-            selectedNationalityIds:
-              profile.nationalites?.map((n: any) => n.nationalityId) || [],
-            countryResidence: profile.countryResidence || "",
-            location: profile.location || "",
+            // Step 9 (✨ MISE À JOUR)
+            countryOriginCode: profile.countryOriginCode || null,
+            selectedNationalityCodes:
+              profile.nationalites
+                ?.map((n: any) => n.nationality?.code)
+                .filter(Boolean) || [],
+            // Step 10 (✨ MISE À JOUR)
+            countryResidenceCode: profile.countryResidenceCode || null,
+            cityId: profile.cityId || null,
+            // Step 11
             smoker: profile.smoker || "",
             alcohol: profile.alcohol || "",
+            // Step 12
             hasChildren: profile.hasChildren || "",
             wantsChildren: profile.wantsChildren || "",
             hasPets: profile.hasPets || "",
             personalityType: profile.personalityType || "",
+            // Step 13
             zodiacSign: profile.zodiacSign || "",
             religion: profile.religion || "",
             loveAnimals: profile.loveAnimals || "",
@@ -244,12 +256,12 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
   const handleSkip = async () => {
     try {
       setIsSavingManually(true);
-      
+
       // Sauvegarder les modifications actuelles
       await saveProfile(formData);
-      
+
       toast.success("Modifications enregistrées !");
-      
+
       // Rediriger vers le profil
       router.push(`/profile/${userId}`);
     } catch (error) {
@@ -263,10 +275,10 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
   const handleClose = async () => {
     try {
       setIsSavingManually(true);
-      
+
       // Sauvegarder les modifications actuelles
       await saveProfile(formData);
-      
+
       // Rediriger vers le profil
       router.push(`/profile/${userId}`);
     } catch (error) {
@@ -284,7 +296,7 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
   };
 
   const handleNext = async () => {
-    // Si on est à la dernière étape, on finalise
+    // Si on est à la dernière étape, on finalise (✨ MISE À JOUR)
     if (currentStep === TOTAL_STEPS - 1) {
       try {
         setIsSavingManually(true);
@@ -311,19 +323,24 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
             studyPlace: formData.studyPlace || undefined,
             jobTitle: formData.jobTitle || undefined,
             companyName: formData.companyName || undefined,
-            countryOrigin: formData.countryOrigin || undefined,
-            nationalityIds:
-              formData.selectedNationalityIds.length > 0
-                ? formData.selectedNationalityIds
+            // Step 9 (✨ MISE À JOUR)
+            countryOriginCode: formData.countryOriginCode || undefined,
+            nationalityCodes:
+              formData.selectedNationalityCodes.length > 0
+                ? formData.selectedNationalityCodes
                 : undefined,
-            countryResidence: formData.countryResidence || undefined,
-            location: formData.location || undefined,
+            // Step 10 (✨ MISE À JOUR)
+            countryResidenceCode: formData.countryResidenceCode || undefined,
+            cityId: formData.cityId || undefined,
+            // Step 11
             smoker: formData.smoker || undefined,
             alcohol: formData.alcohol || undefined,
+            // Step 12
             hasChildren: formData.hasChildren || undefined,
             wantsChildren: formData.wantsChildren || undefined,
             hasPets: formData.hasPets || undefined,
             personalityType: formData.personalityType || undefined,
+            // Step 13
             zodiacSign: formData.zodiacSign || undefined,
             religion: formData.religion || undefined,
             loveAnimals: formData.loveAnimals || undefined,
@@ -544,33 +561,36 @@ export default function ProfileEditModal({ userId }: ProfileEditModalProps) {
               />
             </div>
 
-            {/* Step 9: Origins */}
+            {/* Step 9: Origins (✨ MISE À JOUR) */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <OriginsStep
-                countryOrigin={formData.countryOrigin}
-                selectedNationalityIds={formData.selectedNationalityIds}
+                countryOriginCode={formData.countryOriginCode}
+                selectedNationalityCodes={formData.selectedNationalityCodes}
                 nationalities={referenceData.nationalities}
-                onCountryOriginChange={(v) =>
-                  setFormData((p) => ({ ...p, countryOrigin: v }))
+                onCountryOriginChange={(code) =>
+                  setFormData((p) => ({ ...p, countryOriginCode: code }))
                 }
-                onNationalitiesChange={(ids) =>
-                  setFormData((p) => ({ ...p, selectedNationalityIds: ids }))
+                onNationalitiesChange={(codes) =>
+                  setFormData((p) => ({
+                    ...p,
+                    selectedNationalityCodes: codes,
+                  }))
                 }
               />
             </div>
 
-            {/* Step 10: Residence */}
+            {/* Step 10: Residence (✨ MISE À JOUR) */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <ResidenceStep
-                countryResidence={formData.countryResidence}
-                location={formData.location}
+                countryResidenceCode={formData.countryResidenceCode}
+                cityId={formData.cityId}
                 cities={referenceData.cities}
                 nationalities={referenceData.nationalities}
-                onCountryResidenceChange={(v) =>
-                  setFormData((p) => ({ ...p, countryResidence: v }))
+                onCountryChange={(code) =>
+                  setFormData((p) => ({ ...p, countryResidenceCode: code }))
                 }
-                onLocationChange={(v) =>
-                  setFormData((p) => ({ ...p, location: v }))
+                onCityChange={(cityId) =>
+                  setFormData((p) => ({ ...p, cityId: cityId }))
                 }
               />
             </div>

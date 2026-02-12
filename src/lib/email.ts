@@ -55,7 +55,7 @@ export async function sendVerificationEmail(
             </p>
           </div>
           <div class="footer">
-            <p>© 2025 ${process.env.APP_NAME}. Tous droits réservés.</p>
+            <p>© 2026 ${process.env.APP_NAME}. Tous droits réservés.</p>
           </div>
         </div>
       </body>
@@ -113,7 +113,7 @@ export async function sendPasswordResetEmail(
             </div>
           </div>
           <div class="footer">
-            <p>© 2025 ${process.env.APP_NAME}. Tous droits réservés.</p>
+            <p>© 2026 ${process.env.APP_NAME}. Tous droits réservés.</p>
           </div>
         </div>
       </body>

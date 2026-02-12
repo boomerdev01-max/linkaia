@@ -62,12 +62,12 @@ export default function ProfileModal() {
     // Step 8
     jobTitle: "",
     companyName: "",
-    // Step 9 - Origins
-    countryOrigin: "",
-    selectedNationalityIds: [],
-    // Step 10 - Residence
-    countryResidence: "",
-    location: "",
+    // Step 9 - Origins (✨ MISE À JOUR)
+    countryOriginCode: null,
+    selectedNationalityCodes: [],
+    // Step 10 - Residence (✨ MISE À JOUR)
+    countryResidenceCode: null,
+    cityId: null,
     // Step 11 - Habits
     smoker: "",
     alcohol: "",
@@ -113,15 +113,15 @@ export default function ProfileModal() {
           studyPlace: data.studyPlace || undefined,
           jobTitle: data.jobTitle || undefined,
           companyName: data.companyName || undefined,
-          // Step 9
-          countryOrigin: data.countryOrigin || undefined,
-          nationalityIds:
-            data.selectedNationalityIds.length > 0
-              ? data.selectedNationalityIds
+          // Step 9 (✨ MISE À JOUR)
+          countryOriginCode: data.countryOriginCode || undefined,
+          nationalityCodes:
+            data.selectedNationalityCodes.length > 0
+              ? data.selectedNationalityCodes
               : undefined,
-          // Step 10
-          countryResidence: data.countryResidence || undefined,
-          location: data.location || undefined,
+          // Step 10 (✨ MISE À JOUR)
+          countryResidenceCode: data.countryResidenceCode || undefined,
+          cityId: data.cityId || undefined,
           // Step 11
           smoker: data.smoker || undefined,
           alcohol: data.alcohol || undefined,
@@ -179,13 +179,15 @@ export default function ProfileModal() {
             studyPlace: profile.studyPlace || "",
             jobTitle: profile.jobTitle || "",
             companyName: profile.companyName || "",
-            // Step 9
-            countryOrigin: profile.countryOrigin || "",
-            selectedNationalityIds:
-              profile.nationalites?.map((n: any) => n.nationalityId) || [],
-            // Step 10
-            countryResidence: profile.countryResidence || "",
-            location: profile.location || "",
+            // Step 9 (✨ MISE À JOUR)
+            countryOriginCode: profile.countryOriginCode || null,
+            selectedNationalityCodes:
+              profile.nationalites
+                ?.map((n: any) => n.nationality?.code)
+                .filter(Boolean) || [],
+            // Step 10 (✨ MISE À JOUR)
+            countryResidenceCode: profile.countryResidenceCode || null,
+            cityId: profile.cityId || null,
             // Step 11
             smoker: profile.smoker || "",
             alcohol: profile.alcohol || "",
@@ -226,12 +228,12 @@ export default function ProfileModal() {
     }
 
     const data = await response.json();
-    setFormData((prev) => ({ ...prev, profilePhotoUrl: data.photoUrl }));
+    setFormData((prev: any) => ({ ...prev, profilePhotoUrl: data.photoUrl }));
     toast.success("Photo uploadée !");
   };
 
   const handlePhotoRemove = () => {
-    setFormData((prev) => ({ ...prev, profilePhotoUrl: null }));
+    setFormData((prev: any) => ({ ...prev, profilePhotoUrl: null }));
   };
 
   // Navigation
@@ -260,9 +262,14 @@ export default function ProfileModal() {
           ...formData,
           birthdate: formData.birthdate?.toISOString(),
           interestIds: formData.selectedInterestIds,
-          nationalityIds: formData.selectedNationalityIds,
-          countryOrigin: formData.countryOrigin || undefined,
-          countryResidence: formData.countryResidence || undefined,
+          // ✨ MISE À JOUR
+          countryOriginCode: formData.countryOriginCode || undefined,
+          nationalityCodes:
+            formData.selectedNationalityCodes.length > 0
+              ? formData.selectedNationalityCodes
+              : undefined,
+          countryResidenceCode: formData.countryResidenceCode || undefined,
+          cityId: formData.cityId || undefined,
           loveAnimals: formData.loveAnimals || undefined,
           isTerminated: true,
         }),
@@ -302,12 +309,13 @@ export default function ProfileModal() {
         return !!(formData.educationLevel || formData.studyPlace);
       case 7: // Work
         return !!(formData.jobTitle || formData.companyName);
-      case 8: // Origins (step 9 dans le code)
+      case 8: // Origins (✨ MISE À JOUR)
         return !!(
-          formData.countryOrigin || formData.selectedNationalityIds.length > 0
+          formData.countryOriginCode ||
+          formData.selectedNationalityCodes.length > 0
         );
-      case 9: // Residence (step 10)
-        return !!formData.location;
+      case 9: // Residence (✨ MISE À JOUR)
+        return !!formData.cityId;
       case 10: // Habits
         return !!(formData.smoker || formData.alcohol);
       case 11: // Family & Personality
@@ -374,13 +382,13 @@ export default function ProfileModal() {
                 pseudo={formData.pseudo}
                 birthdate={formData.birthdate}
                 onGenderChange={(v) =>
-                  setFormData((p) => ({ ...p, gender: v }))
+                  setFormData((p: any) => ({ ...p, gender: v }))
                 }
                 onPseudoChange={(v) =>
-                  setFormData((p) => ({ ...p, pseudo: v }))
+                  setFormData((p: any) => ({ ...p, pseudo: v }))
                 }
                 onBirthdateChange={(v) =>
-                  setFormData((p) => ({ ...p, birthdate: v }))
+                  setFormData((p: any) => ({ ...p, birthdate: v }))
                 }
               />
             </div>
@@ -400,10 +408,10 @@ export default function ProfileModal() {
                 sexualOrientation={formData.sexualOrientation}
                 relationshipStatus={formData.relationshipStatus}
                 onOrientationChange={(v) =>
-                  setFormData((p) => ({ ...p, sexualOrientation: v }))
+                  setFormData((p: any) => ({ ...p, sexualOrientation: v }))
                 }
                 onRelationshipChange={(v) =>
-                  setFormData((p) => ({ ...p, relationshipStatus: v }))
+                  setFormData((p: any) => ({ ...p, relationshipStatus: v }))
                 }
               />
             </div>
@@ -414,7 +422,7 @@ export default function ProfileModal() {
                 selectedInterestIds={formData.selectedInterestIds}
                 interestCategories={referenceData.interestCategories}
                 onInterestsChange={(ids) =>
-                  setFormData((p) => ({ ...p, selectedInterestIds: ids }))
+                  setFormData((p: any) => ({ ...p, selectedInterestIds: ids }))
                 }
               />
             </div>
@@ -423,7 +431,7 @@ export default function ProfileModal() {
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <BioStep
                 bio={formData.bio}
-                onBioChange={(v) => setFormData((p) => ({ ...p, bio: v }))}
+                onBioChange={(v) => setFormData((p: any) => ({ ...p, bio: v }))}
               />
             </div>
 
@@ -434,13 +442,13 @@ export default function ProfileModal() {
                 weight={formData.weight}
                 skinTone={formData.skinTone}
                 onHeightChange={(v) =>
-                  setFormData((p) => ({ ...p, height: v }))
+                  setFormData((p: any) => ({ ...p, height: v }))
                 }
                 onWeightChange={(v) =>
-                  setFormData((p) => ({ ...p, weight: v }))
+                  setFormData((p: any) => ({ ...p, weight: v }))
                 }
                 onSkinToneChange={(v) =>
-                  setFormData((p) => ({ ...p, skinTone: v }))
+                  setFormData((p: any) => ({ ...p, skinTone: v }))
                 }
               />
             </div>
@@ -451,10 +459,10 @@ export default function ProfileModal() {
                 educationLevel={formData.educationLevel}
                 studyPlace={formData.studyPlace}
                 onEducationLevelChange={(v) =>
-                  setFormData((p) => ({ ...p, educationLevel: v }))
+                  setFormData((p: any) => ({ ...p, educationLevel: v }))
                 }
                 onStudyPlaceChange={(v) =>
-                  setFormData((p) => ({ ...p, studyPlace: v }))
+                  setFormData((p: any) => ({ ...p, studyPlace: v }))
                 }
               />
             </div>
@@ -465,41 +473,44 @@ export default function ProfileModal() {
                 jobTitle={formData.jobTitle}
                 companyName={formData.companyName}
                 onJobTitleChange={(v) =>
-                  setFormData((p) => ({ ...p, jobTitle: v }))
+                  setFormData((p: any) => ({ ...p, jobTitle: v }))
                 }
                 onCompanyNameChange={(v) =>
-                  setFormData((p) => ({ ...p, companyName: v }))
+                  setFormData((p: any) => ({ ...p, companyName: v }))
                 }
               />
             </div>
 
-            {/* Step 9: Origins */}
+            {/* Step 9: Origins (✨ MISE À JOUR) */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <OriginsStep
-                countryOrigin={formData.countryOrigin}
-                selectedNationalityIds={formData.selectedNationalityIds}
+                countryOriginCode={formData.countryOriginCode}
+                selectedNationalityCodes={formData.selectedNationalityCodes}
                 nationalities={referenceData.nationalities}
-                onCountryOriginChange={(v) =>
-                  setFormData((p) => ({ ...p, countryOrigin: v }))
+                onCountryOriginChange={(code) =>
+                  setFormData((p: any) => ({ ...p, countryOriginCode: code }))
                 }
-                onNationalitiesChange={(ids) =>
-                  setFormData((p) => ({ ...p, selectedNationalityIds: ids }))
+                onNationalitiesChange={(codes) =>
+                  setFormData((p: any) => ({
+                    ...p,
+                    selectedNationalityCodes: codes,
+                  }))
                 }
               />
             </div>
 
-            {/* Step 10: Residence */}
+            {/* Step 10: Residence (✨ MISE À JOUR) */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <ResidenceStep
-                countryResidence={formData.countryResidence}
-                location={formData.location}
+                countryResidenceCode={formData.countryResidenceCode}
+                cityId={formData.cityId}
                 cities={referenceData.cities}
                 nationalities={referenceData.nationalities}
-                onCountryResidenceChange={(v) =>
-                  setFormData((p) => ({ ...p, countryResidence: v }))
+                onCountryChange={(code) =>
+                  setFormData((p: any) => ({ ...p, countryResidenceCode: code }))
                 }
-                onLocationChange={(v) =>
-                  setFormData((p) => ({ ...p, location: v }))
+                onCityChange={(cityId) =>
+                  setFormData((p: any) => ({ ...p, cityId: cityId }))
                 }
               />
             </div>
@@ -510,10 +521,10 @@ export default function ProfileModal() {
                 smoker={formData.smoker}
                 alcohol={formData.alcohol}
                 onSmokerChange={(v) =>
-                  setFormData((p) => ({ ...p, smoker: v }))
+                  setFormData((p: any) => ({ ...p, smoker: v }))
                 }
                 onAlcoholChange={(v) =>
-                  setFormData((p) => ({ ...p, alcohol: v }))
+                  setFormData((p: any) => ({ ...p, alcohol: v }))
                 }
               />
             </div>
@@ -526,16 +537,16 @@ export default function ProfileModal() {
                 hasPets={formData.hasPets}
                 personalityType={formData.personalityType}
                 onHasChildrenChange={(v) =>
-                  setFormData((p) => ({ ...p, hasChildren: v }))
+                  setFormData((p: any) => ({ ...p, hasChildren: v }))
                 }
                 onWantsChildrenChange={(v) =>
-                  setFormData((p) => ({ ...p, wantsChildren: v }))
+                  setFormData((p: any) => ({ ...p, wantsChildren: v }))
                 }
                 onHasPetsChange={(v) =>
-                  setFormData((p) => ({ ...p, hasPets: v }))
+                  setFormData((p: any) => ({ ...p, hasPets: v }))
                 }
                 onPersonalityTypeChange={(v) =>
-                  setFormData((p) => ({ ...p, personalityType: v }))
+                  setFormData((p: any) => ({ ...p, personalityType: v }))
                 }
               />
             </div>
@@ -547,13 +558,13 @@ export default function ProfileModal() {
                 religion={formData.religion}
                 loveAnimals={formData.loveAnimals}
                 onZodiacSignChange={(v) =>
-                  setFormData((p) => ({ ...p, zodiacSign: v }))
+                  setFormData((p: any) => ({ ...p, zodiacSign: v }))
                 }
                 onReligionChange={(v) =>
-                  setFormData((p) => ({ ...p, religion: v }))
+                  setFormData((p: any) => ({ ...p, religion: v }))
                 }
                 onLoveAnimalsChange={(v) =>
-                  setFormData((p) => ({ ...p, loveAnimals: v }))
+                  setFormData((p: any) => ({ ...p, loveAnimals: v }))
                 }
               />
             </div>

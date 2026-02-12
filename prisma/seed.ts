@@ -1,6 +1,8 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+// ✨ Import de country-state-city
+import { Country, State, City as CscCity } from "country-state-city";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -9,6 +11,237 @@ if (!connectionString) {
 const adapter = new PrismaPg({ connectionString });
 
 const prisma = new PrismaClient({ adapter });
+
+// ============================================
+// 🌍 STRATÉGIE DE SEED OPTIMISÉE POUR PAYS & VILLES
+// ============================================
+/**
+ * On seed uniquement :
+ * 1. Pays francophones (Afrique + Europe)
+ * 2. Grandes villes internationales (population estimée)
+ * 3. Villes africaines importantes
+ *
+ * Estimation : ~200 pays + ~500-1000 villes = Léger pour Supabase Free
+ */
+
+// Liste des pays francophones prioritaires (codes ISO)
+const PRIORITY_COUNTRIES = [
+  // Afrique francophone
+  "BJ",
+  "BF",
+  "BI",
+  "CM",
+  "CF",
+  "TD",
+  "KM",
+  "CG",
+  "CD",
+  "CI",
+  "DJ",
+  "GQ",
+  "GA",
+  "GN",
+  "ML",
+  "NE",
+  "RW",
+  "SN",
+  "SC",
+  "TG",
+  // Europe francophone
+  "FR",
+  "BE",
+  "CH",
+  "LU",
+  "MC",
+  // Canada
+  "CA",
+  // Maghreb
+  "MA",
+  "DZ",
+  "TN",
+  // Autres pays importants
+  "US",
+  "GB",
+  "DE",
+  "ES",
+  "IT",
+  "PT",
+  "NL",
+];
+
+// Villes africaines majeures à inclure (par pays)
+const AFRICAN_MAJOR_CITIES: Record<string, string[]> = {
+  BJ: ["Cotonou", "Porto-Novo", "Parakou", "Abomey-Calavi"],
+  BF: ["Ouagadougou", "Bobo-Dioulasso"],
+  CI: ["Abidjan", "Yamoussoukro", "Bouaké", "Daloa"],
+  SN: ["Dakar", "Touba", "Thiès", "Saint-Louis"],
+  CM: ["Douala", "Yaoundé", "Garoua", "Bafoussam"],
+  TG: ["Lomé", "Sokodé", "Kara"],
+  ML: ["Bamako", "Sikasso", "Mopti"],
+  NE: ["Niamey", "Zinder", "Maradi"],
+  GA: ["Libreville", "Port-Gentil"],
+  CG: ["Brazzaville", "Pointe-Noire"],
+  CD: ["Kinshasa", "Lubumbashi", "Mbuji-Mayi"],
+  MA: ["Casablanca", "Rabat", "Marrakech", "Fès", "Tanger"],
+  DZ: ["Alger", "Oran", "Constantine"],
+  TN: ["Tunis", "Sfax", "Sousse"],
+};
+
+// Villes internationales majeures (pour non-africains)
+const INTERNATIONAL_MAJOR_CITIES = [
+  // France
+  "Paris",
+  "Marseille",
+  "Lyon",
+  "Toulouse",
+  "Nice",
+  "Nantes",
+  "Strasbourg",
+  "Montpellier",
+  "Bordeaux",
+  "Lille",
+  // USA
+  "New York",
+  "Los Angeles",
+  "Chicago",
+  "Houston",
+  "Miami",
+  // UK
+  "London",
+  "Manchester",
+  "Birmingham",
+  // Canada
+  "Toronto",
+  "Montreal",
+  "Vancouver",
+  "Quebec City",
+  // Europe
+  "Berlin",
+  "Madrid",
+  "Barcelona",
+  "Rome",
+  "Milan",
+  "Amsterdam",
+  "Lisbon",
+  "Brussels",
+  "Geneva",
+  "Zurich",
+];
+
+async function seedNationalities() {
+  console.log("🌍 Seeding Nationalities from country-state-city...");
+
+  const countries = Country.getAllCountries();
+  let seededCount = 0;
+
+  for (const country of countries) {
+    // Seeder TOUS les pays (pour avoir la liste complète dans les filtres)
+    await prisma.nationality.upsert({
+      where: { code: country.isoCode },
+      update: {
+        nameFr: country.name, // country-state-city a des noms en anglais, on garde tel quel
+        nameEn: country.name,
+        flag: country.flag,
+      },
+      create: {
+        code: country.isoCode,
+        nameFr: country.name,
+        nameEn: country.name,
+        flag: country.flag,
+      },
+    });
+
+    seededCount++;
+  }
+
+  console.log(`✅ ${seededCount} nationalities seeded`);
+}
+
+async function seedCities() {
+  console.log("🏙️ Seeding Cities from country-state-city...");
+
+  let seededCount = 0;
+
+  // 1. Seeder les villes des pays prioritaires
+  for (const countryCode of PRIORITY_COUNTRIES) {
+    const country = Country.getCountryByCode(countryCode);
+    if (!country) continue;
+
+    const states = State.getStatesOfCountry(countryCode);
+
+    for (const state of states) {
+      const cities = CscCity.getCitiesOfState(countryCode, state.isoCode);
+
+      for (const city of cities) {
+        // Filtrage intelligent :
+        // - Villes africaines : on prend celles de la liste AFRICAN_MAJOR_CITIES
+        // - Villes internationales : on prend celles de INTERNATIONAL_MAJOR_CITIES
+        // - Villes françaises : on prend toutes celles avec population > 50k (approximation)
+
+        const isAfricanMajorCity = AFRICAN_MAJOR_CITIES[countryCode]?.includes(
+          city.name,
+        );
+        const isInternationalMajorCity = INTERNATIONAL_MAJOR_CITIES.includes(
+          city.name,
+        );
+
+        // Heuristique simple : si le nom de la ville est court et connu, on la garde
+        const isFrenchCity = countryCode === "FR" && city.name.length > 3;
+
+        if (
+          isAfricanMajorCity ||
+          isInternationalMajorCity ||
+          (isFrenchCity && seededCount < 1000) // Limiter à 1000 villes max
+        ) {
+          const displayName = `${city.name}, ${state.name}, ${country.name}`;
+
+          await prisma.city.upsert({
+            where: {
+              name_stateCode_countryCode: {
+                name: city.name,
+                stateCode: state.isoCode,
+                countryCode: countryCode,
+              },
+            },
+            update: {
+              stateName: state.name,
+              countryName: country.name,
+              displayName: displayName,
+              latitude: city.latitude ? parseFloat(city.latitude) : null,
+              longitude: city.longitude ? parseFloat(city.longitude) : null,
+            },
+            create: {
+              name: city.name,
+              stateCode: state.isoCode,
+              stateName: state.name,
+              countryCode: countryCode,
+              countryName: country.name,
+              displayName: displayName,
+              latitude: city.latitude ? parseFloat(city.latitude) : null,
+              longitude: city.longitude ? parseFloat(city.longitude) : null,
+            },
+          });
+
+          seededCount++;
+
+          // Limite de sécurité pour ne pas exploser la DB
+          if (seededCount >= 1500) {
+            console.log(
+              `⚠️ Limite de 1500 villes atteinte, arrêt du seed cities`,
+            );
+            break;
+          }
+        }
+      }
+
+      if (seededCount >= 1500) break;
+    }
+
+    if (seededCount >= 1500) break;
+  }
+
+  console.log(`✅ ${seededCount} cities seeded`);
+}
 
 async function seedReportCategories() {
   console.log("⚠️ Seeding Report Categories...");
@@ -321,92 +554,90 @@ async function seedRBAC() {
   console.log("✅ Actions created");
 
   // ============================================
-// 4. MENUS (synchronisés avec adminConfig)
-// ============================================
-console.log("📋 Creating Menus...");
+  // 4. MENUS (synchronisés avec adminConfig)
+  // ============================================
+  console.log("📋 Creating Menus...");
 
-// Menus Parents - ❌ RETIRER LES PATHS
-const menuUsers = await prisma.menu.upsert({
-  where: { name: "Utilisateurs" },
-  update: { path: null, icon: "Users", order: 1 }, // ✅ path: null
-  create: {
-    name: "Utilisateurs",
-    path: null, // ✅ Pas de redirection
-    icon: "Users",
-    order: 1,
-  },
-});
+  // Menus Parents - ❌ RETIRER LES PATHS
+  const menuUsers = await prisma.menu.upsert({
+    where: { name: "Utilisateurs" },
+    update: { path: null, icon: "Users", order: 1 }, // ✅ path: null
+    create: {
+      name: "Utilisateurs",
+      path: null, // ✅ Pas de redirection
+      icon: "Users",
+      order: 1,
+    },
+  });
 
-const menuContent = await prisma.menu.upsert({
-  where: { name: "Gestion de contenu" },
-  update: { path: null, icon: "ImageIcon", order: 2 },
-  create: {
-    name: "Gestion de contenu",
-    path: null,
-    icon: "ImageIcon",
-    order: 2,
-  },
-});
+  const menuContent = await prisma.menu.upsert({
+    where: { name: "Gestion de contenu" },
+    update: { path: null, icon: "ImageIcon", order: 2 },
+    create: {
+      name: "Gestion de contenu",
+      path: null,
+      icon: "ImageIcon",
+      order: 2,
+    },
+  });
 
-const menuServices = await prisma.menu.upsert({
-  where: { name: "Services & Paiements" },
-  update: { path: null, icon: "CreditCard", order: 3 },
-  create: {
-    name: "Services & Paiements",
-    path: null,
-    icon: "CreditCard",
-    order: 3,
-  },
-});
+  const menuServices = await prisma.menu.upsert({
+    where: { name: "Services & Paiements" },
+    update: { path: null, icon: "CreditCard", order: 3 },
+    create: {
+      name: "Services & Paiements",
+      path: null,
+      icon: "CreditCard",
+      order: 3,
+    },
+  });
 
-const menuStats = await prisma.menu.upsert({
-  where: { name: "Statistiques & Rapports" },
-  update: { path: null, icon: "BarChart3", order: 4 },
-  create: {
-    name: "Statistiques & Rapports",
-    path: null,
-    icon: "BarChart3",
-    order: 4,
-  },
-});
+  const menuStats = await prisma.menu.upsert({
+    where: { name: "Statistiques & Rapports" },
+    update: { path: null, icon: "BarChart3", order: 4 },
+    create: {
+      name: "Statistiques & Rapports",
+      path: null,
+      icon: "BarChart3",
+      order: 4,
+    },
+  });
 
-const menuComm = await prisma.menu.upsert({
-  where: { name: "Communication" },
-  update: { path: null, icon: "Bell", order: 5 },
-  create: {
-    name: "Communication",
-    path: null,
-    icon: "Bell",
-    order: 5,
-  },
-});
+  const menuComm = await prisma.menu.upsert({
+    where: { name: "Communication" },
+    update: { path: null, icon: "Bell", order: 5 },
+    create: {
+      name: "Communication",
+      path: null,
+      icon: "Bell",
+      order: 5,
+    },
+  });
 
-const menuConfig = await prisma.menu.upsert({
-  where: { name: "Configuration système" },
-  update: { path: null, icon: "Settings", order: 6 },
-  create: {
-    name: "Configuration système",
-    path: null,
-    icon: "Settings",
-    order: 6,
-  },
-});
+  const menuConfig = await prisma.menu.upsert({
+    where: { name: "Configuration système" },
+    update: { path: null, icon: "Settings", order: 6 },
+    create: {
+      name: "Configuration système",
+      path: null,
+      icon: "Settings",
+      order: 6,
+    },
+  });
 
-const menuFinance = await prisma.menu.upsert({
-  where: { name: "Finances" },
-  update: { path: null, icon: "Wallet", order: 7 },
-  create: {
-    name: "Finances",
-    path: null,
-    icon: "Wallet",
-    order: 7,
-  },
-});
+  const menuFinance = await prisma.menu.upsert({
+    where: { name: "Finances" },
+    update: { path: null, icon: "Wallet", order: 7 },
+    create: {
+      name: "Finances",
+      path: null,
+      icon: "Wallet",
+      order: 7,
+    },
+  });
 
-// Sous-Menus - ✅ GARDER LES PATHS
-// (Le reste de ton code reste identique)
+  // Sous-Menus - ✅ GARDER LES PATHS
 
-  // Sous-Menus
   await prisma.menu.upsert({
     where: { name: "Profils Utilisateurs" },
     update: {
@@ -737,7 +968,7 @@ const menuFinance = await prisma.menu.upsert({
   const menuPermMap: Record<string, string[]> = {
     Utilisateurs: ["user.read", "user.list"],
     "Profils Utilisateurs": ["user.read", "user.profile"],
-    "Rôles & Permissions": ["role.read", "permission.manage"],
+    "Rôles et permissions": ["role.read", "permission.manage"],
     "Codes Prestige": ["prestige.manage"],
     "Gestion de contenu": ["post.read", "media.moderate"],
     "Médias en Attente": ["media.moderate"],
@@ -1174,72 +1405,7 @@ async function seedSubscriptions() {
   console.log("✅ Subscription types and features created");
 }
 
-async function main() {
-  console.log("🌱 Starting seed...");
-
-  // RBAC d'abord, puis Souscriptions
-  await seedRBAC();
-  await seedCompanyRoles();
-  await seedSubscriptions();
-  await seedReportCategories();
-
-  // ============================================
-  // 1. REACTION TYPES
-  // ============================================
-  console.log("😊 Seeding Reaction Types...");
-
-  const reactionTypes = [
-    {
-      code: "support",
-      label: "Soutien",
-      emoji: "✊",
-      order: 1,
-    },
-    {
-      code: "love",
-      label: "J'adore",
-      emoji: "💖",
-      order: 2,
-    },
-    {
-      code: "laugh",
-      label: "Rire",
-      emoji: "😂",
-      order: 3,
-    },
-    {
-      code: "wow",
-      label: "Waoh",
-      emoji: "🤯",
-      order: 4,
-    },
-    {
-      code: "sad",
-      label: "Touché",
-      emoji: "🥺",
-      order: 5,
-    },
-    {
-      code: "angry",
-      label: "Furieux",
-      emoji: "😡",
-      order: 6,
-    },
-  ];
-
-  for (const reaction of reactionTypes) {
-    await prisma.reactionType.upsert({
-      where: { code: reaction.code },
-      update: reaction,
-      create: reaction,
-    });
-  }
-
-  console.log("✅ Reaction Types seeded");
-
-  // ============================================
-  // 2. CENTRES D'INTÉRÊT (Inspirés de Badoo)
-  // ============================================
+async function seedInterests() {
   console.log("📚 Seeding Interest Categories & Interests...");
 
   const interestCategoriesData = [
@@ -1381,399 +1547,241 @@ async function main() {
   }
 
   console.log("✅ Interest Categories & Interests seeded");
+}
 
-  // ============================================
-  // 3. NATIONALITÉS (Top 50 pays)
-  // ============================================
-  console.log("🌍 Seeding Nationalities...");
+async function seedReactions() {
+  console.log("😊 Seeding Reaction Types...");
 
-  const nationalitiesData = [
-    { code: "FR", nameFr: "Française", nameEn: "French", flag: "🇫🇷" },
-    { code: "US", nameFr: "Américaine", nameEn: "American", flag: "🇺🇸" },
-    { code: "GB", nameFr: "Britannique", nameEn: "British", flag: "🇬🇧" },
-    { code: "ES", nameFr: "Espagnole", nameEn: "Spanish", flag: "🇪🇸" },
-    { code: "IT", nameFr: "Italienne", nameEn: "Italian", flag: "🇮🇹" },
-    { code: "DE", nameFr: "Allemande", nameEn: "German", flag: "🇩🇪" },
-    { code: "PT", nameFr: "Portugaise", nameEn: "Portuguese", flag: "🇵🇹" },
-    { code: "BE", nameFr: "Belge", nameEn: "Belgian", flag: "🇧🇪" },
-    { code: "CH", nameFr: "Suisse", nameEn: "Swiss", flag: "🇨🇭" },
-    { code: "CA", nameFr: "Canadienne", nameEn: "Canadian", flag: "🇨🇦" },
-    { code: "BR", nameFr: "Brésilienne", nameEn: "Brazilian", flag: "🇧🇷" },
-    { code: "MX", nameFr: "Mexicaine", nameEn: "Mexican", flag: "🇲🇽" },
-    { code: "AR", nameFr: "Argentine", nameEn: "Argentinian", flag: "🇦🇷" },
-    { code: "MA", nameFr: "Marocaine", nameEn: "Moroccan", flag: "🇲🇦" },
-    { code: "DZ", nameFr: "Algérienne", nameEn: "Algerian", flag: "🇩🇿" },
-    { code: "TN", nameFr: "Tunisienne", nameEn: "Tunisian", flag: "🇹🇳" },
-    { code: "SN", nameFr: "Sénégalaise", nameEn: "Senegalese", flag: "🇸🇳" },
-    { code: "CI", nameFr: "Ivoirienne", nameEn: "Ivorian", flag: "🇨🇮" },
-    { code: "CM", nameFr: "Camerounaise", nameEn: "Cameroonian", flag: "🇨🇲" },
-    { code: "BJ", nameFr: "Béninoise", nameEn: "Beninese", flag: "🇧🇯" },
-    { code: "CN", nameFr: "Chinoise", nameEn: "Chinese", flag: "🇨🇳" },
-    { code: "JP", nameFr: "Japonaise", nameEn: "Japanese", flag: "🇯🇵" },
-    { code: "IN", nameFr: "Indienne", nameEn: "Indian", flag: "🇮🇳" },
-    { code: "RU", nameFr: "Russe", nameEn: "Russian", flag: "🇷🇺" },
-    { code: "TR", nameFr: "Turque", nameEn: "Turkish", flag: "🇹🇷" },
-    { code: "EG", nameFr: "Égyptienne", nameEn: "Egyptian", flag: "🇪🇬" },
+  const reactionTypes = [
     {
-      code: "ZA",
-      nameFr: "Sud-Africaine",
-      nameEn: "South African",
-      flag: "🇿🇦",
-    },
-    { code: "AU", nameFr: "Australienne", nameEn: "Australian", flag: "🇦🇺" },
-    {
-      code: "NZ",
-      nameFr: "Néo-Zélandaise",
-      nameEn: "New Zealander",
-      flag: "🇳🇿",
-    },
-    { code: "NL", nameFr: "Néerlandaise", nameEn: "Dutch", flag: "🇳🇱" },
-    { code: "SE", nameFr: "Suédoise", nameEn: "Swedish", flag: "🇸🇪" },
-    { code: "NO", nameFr: "Norvégienne", nameEn: "Norwegian", flag: "🇳🇴" },
-    { code: "DK", nameFr: "Danoise", nameEn: "Danish", flag: "🇩🇰" },
-    { code: "FI", nameFr: "Finlandaise", nameEn: "Finnish", flag: "🇫🇮" },
-    { code: "PL", nameFr: "Polonaise", nameEn: "Polish", flag: "🇵🇱" },
-    { code: "GR", nameFr: "Grecque", nameEn: "Greek", flag: "🇬🇷" },
-    { code: "IE", nameFr: "Irlandaise", nameEn: "Irish", flag: "🇮🇪" },
-    { code: "AT", nameFr: "Autrichienne", nameEn: "Austrian", flag: "🇦🇹" },
-    { code: "CZ", nameFr: "Tchèque", nameEn: "Czech", flag: "🇨🇿" },
-    { code: "HU", nameFr: "Hongroise", nameEn: "Hungarian", flag: "🇭🇺" },
-    { code: "RO", nameFr: "Roumaine", nameEn: "Romanian", flag: "🇷🇴" },
-    { code: "HR", nameFr: "Croate", nameEn: "Croatian", flag: "🇭🇷" },
-    { code: "KR", nameFr: "Sud-Coréenne", nameEn: "South Korean", flag: "🇰🇷" },
-    { code: "TH", nameFr: "Thaïlandaise", nameEn: "Thai", flag: "🇹🇭" },
-    { code: "VN", nameFr: "Vietnamienne", nameEn: "Vietnamese", flag: "🇻🇳" },
-    { code: "ID", nameFr: "Indonésienne", nameEn: "Indonesian", flag: "🇮🇩" },
-    { code: "PH", nameFr: "Philippine", nameEn: "Filipino", flag: "🇵🇭" },
-    { code: "SG", nameFr: "Singapourienne", nameEn: "Singaporean", flag: "🇸🇬" },
-    { code: "AE", nameFr: "Émirienne", nameEn: "Emirati", flag: "🇦🇪" },
-    { code: "SA", nameFr: "Saoudienne", nameEn: "Saudi", flag: "🇸🇦" },
-  ];
-
-  for (const nat of nationalitiesData) {
-    await prisma.nationality.upsert({
-      where: { code: nat.code },
-      update: nat,
-      create: nat,
-    });
-  }
-
-  console.log("✅ Nationalities seeded");
-
-  // ============================================
-  // 4. VILLES PRÉDÉFINIES (Top villes françaises + internationales)
-  // ============================================
-  console.log("🏙️ Seeding Cities...");
-
-  const citiesData = [
-    // France
-    {
-      name: "Paris",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Paris, France",
+      code: "support",
+      label: "Soutien",
+      emoji: "✊",
+      order: 1,
     },
     {
-      name: "Marseille",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Marseille, France",
+      code: "love",
+      label: "J'adore",
+      emoji: "💖",
+      order: 2,
     },
     {
-      name: "Lyon",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Lyon, France",
+      code: "laugh",
+      label: "Rire",
+      emoji: "😂",
+      order: 3,
     },
     {
-      name: "Toulouse",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Toulouse, France",
+      code: "wow",
+      label: "Waoh",
+      emoji: "🤯",
+      order: 4,
     },
     {
-      name: "Nice",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Nice, France",
+      code: "sad",
+      label: "Touché",
+      emoji: "🥺",
+      order: 5,
     },
     {
-      name: "Nantes",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Nantes, France",
-    },
-    {
-      name: "Strasbourg",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Strasbourg, France",
-    },
-    {
-      name: "Montpellier",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Montpellier, France",
-    },
-    {
-      name: "Bordeaux",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Bordeaux, France",
-    },
-    {
-      name: "Lille",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Lille, France",
-    },
-    {
-      name: "Rennes",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Rennes, France",
-    },
-    {
-      name: "Reims",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Reims, France",
-    },
-    {
-      name: "Le Havre",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Le Havre, France",
-    },
-    {
-      name: "Saint-Étienne",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Saint-Étienne, France",
-    },
-    {
-      name: "Toulon",
-      countryCode: "FR",
-      countryName: "France",
-      displayName: "Toulon, France",
-    },
-
-    // Belgique
-    {
-      name: "Bruxelles",
-      countryCode: "BE",
-      countryName: "Belgique",
-      displayName: "Bruxelles, Belgique",
-    },
-    {
-      name: "Anvers",
-      countryCode: "BE",
-      countryName: "Belgique",
-      displayName: "Anvers, Belgique",
-    },
-    {
-      name: "Gand",
-      countryCode: "BE",
-      countryName: "Belgique",
-      displayName: "Gand, Belgique",
-    },
-    {
-      name: "Liège",
-      countryCode: "BE",
-      countryName: "Belgique",
-      displayName: "Liège, Belgique",
-    },
-
-    // Suisse
-    {
-      name: "Genève",
-      countryCode: "CH",
-      countryName: "Suisse",
-      displayName: "Genève, Suisse",
-    },
-    {
-      name: "Zurich",
-      countryCode: "CH",
-      countryName: "Suisse",
-      displayName: "Zurich, Suisse",
-    },
-    {
-      name: "Lausanne",
-      countryCode: "CH",
-      countryName: "Suisse",
-      displayName: "Lausanne, Suisse",
-    },
-    {
-      name: "Berne",
-      countryCode: "CH",
-      countryName: "Suisse",
-      displayName: "Berne, Suisse",
-    },
-
-    // Canada
-    {
-      name: "Montréal",
-      countryCode: "CA",
-      countryName: "Canada",
-      displayName: "Montréal, Canada",
-    },
-    {
-      name: "Québec",
-      countryCode: "CA",
-      countryName: "Canada",
-      displayName: "Québec, Canada",
-    },
-    {
-      name: "Toronto",
-      countryCode: "CA",
-      countryName: "Canada",
-      displayName: "Toronto, Canada",
-    },
-    {
-      name: "Vancouver",
-      countryCode: "CA",
-      countryName: "Canada",
-      displayName: "Vancouver, Canada",
-    },
-
-    // Afrique francophone
-    {
-      name: "Abidjan",
-      countryCode: "CI",
-      countryName: "Côte d'Ivoire",
-      displayName: "Abidjan, Côte d'Ivoire",
-    },
-    {
-      name: "Dakar",
-      countryCode: "SN",
-      countryName: "Sénégal",
-      displayName: "Dakar, Sénégal",
-    },
-    {
-      name: "Cotonou",
-      countryCode: "BJ",
-      countryName: "Bénin",
-      displayName: "Cotonou, Bénin",
-    },
-    {
-      name: "Douala",
-      countryCode: "CM",
-      countryName: "Cameroun",
-      displayName: "Douala, Cameroun",
-    },
-    {
-      name: "Yaoundé",
-      countryCode: "CM",
-      countryName: "Cameroun",
-      displayName: "Yaoundé, Cameroun",
-    },
-    {
-      name: "Casablanca",
-      countryCode: "MA",
-      countryName: "Maroc",
-      displayName: "Casablanca, Maroc",
-    },
-    {
-      name: "Rabat",
-      countryCode: "MA",
-      countryName: "Maroc",
-      displayName: "Rabat, Maroc",
-    },
-    {
-      name: "Alger",
-      countryCode: "DZ",
-      countryName: "Algérie",
-      displayName: "Alger, Algérie",
-    },
-    {
-      name: "Tunis",
-      countryCode: "TN",
-      countryName: "Tunisie",
-      displayName: "Tunis, Tunisie",
-    },
-
-    // International
-    {
-      name: "Londres",
-      countryCode: "GB",
-      countryName: "Royaume-Uni",
-      displayName: "Londres, Royaume-Uni",
-    },
-    {
-      name: "New York",
-      countryCode: "US",
-      countryName: "États-Unis",
-      displayName: "New York, États-Unis",
-    },
-    {
-      name: "Los Angeles",
-      countryCode: "US",
-      countryName: "États-Unis",
-      displayName: "Los Angeles, États-Unis",
-    },
-    {
-      name: "Berlin",
-      countryCode: "DE",
-      countryName: "Allemagne",
-      displayName: "Berlin, Allemagne",
-    },
-    {
-      name: "Madrid",
-      countryCode: "ES",
-      countryName: "Espagne",
-      displayName: "Madrid, Espagne",
-    },
-    {
-      name: "Barcelone",
-      countryCode: "ES",
-      countryName: "Espagne",
-      displayName: "Barcelone, Espagne",
-    },
-    {
-      name: "Rome",
-      countryCode: "IT",
-      countryName: "Italie",
-      displayName: "Rome, Italie",
-    },
-    {
-      name: "Milan",
-      countryCode: "IT",
-      countryName: "Italie",
-      displayName: "Milan, Italie",
-    },
-    {
-      name: "Amsterdam",
-      countryCode: "NL",
-      countryName: "Pays-Bas",
-      displayName: "Amsterdam, Pays-Bas",
-    },
-    {
-      name: "Lisbonne",
-      countryCode: "PT",
-      countryName: "Portugal",
-      displayName: "Lisbonne, Portugal",
+      code: "angry",
+      label: "Furieux",
+      emoji: "😡",
+      order: 6,
     },
   ];
 
-  for (const city of citiesData) {
-    await prisma.city.upsert({
-      where: {
-        name_countryCode: {
-          name: city.name,
-          countryCode: city.countryCode,
-        },
-      },
-      update: city,
-      create: city,
+  for (const reaction of reactionTypes) {
+    await prisma.reactionType.upsert({
+      where: { code: reaction.code },
+      update: reaction,
+      create: reaction,
     });
   }
 
-  console.log("✅ Cities seeded");
+  console.log("✅ Reaction Types seeded");
+}
+
+async function seedReferenceData() {
+  console.log("📚 Seeding Reference Data for Preferences...");
 
   // ============================================
-  // 5. CHAT DATA
+  // 1. RELIGIONS
   // ============================================
-  await seedChatData();
+  const religions = [
+    { code: "christian", label: "Chrétien", emoji: "✝️", order: 1 },
+    { code: "muslim", label: "Musulman", emoji: "☪️", order: 2 },
+    { code: "jewish", label: "Juif", emoji: "✡️", order: 3 },
+    { code: "hindu", label: "Hindou", emoji: "🕉️", order: 4 },
+    { code: "buddhist", label: "Bouddhiste", emoji: "☸️", order: 5 },
+    { code: "atheist", label: "Athée", emoji: "🚫", order: 6 },
+    { code: "agnostic", label: "Agnostique", emoji: "❓", order: 7 },
+    { code: "spiritual", label: "Spirituel", emoji: "🌟", order: 8 },
+    { code: "other", label: "Autre", emoji: "➕", order: 9 },
+  ];
+
+  for (const religion of religions) {
+    await prisma.religion.upsert({
+      where: { code: religion.code },
+      update: religion,
+      create: religion,
+    });
+  }
+  console.log(`✅ ${religions.length} religions seeded`);
+
+  // ============================================
+  // 2. SIGNES ASTROLOGIQUES
+  // ============================================
+  const zodiacSigns = [
+    { code: "aries", label: "Bélier", emoji: "♈", order: 1 },
+    { code: "taurus", label: "Taureau", emoji: "♉", order: 2 },
+    { code: "gemini", label: "Gémeaux", emoji: "♊", order: 3 },
+    { code: "cancer", label: "Cancer", emoji: "♋", order: 4 },
+    { code: "leo", label: "Lion", emoji: "♌", order: 5 },
+    { code: "virgo", label: "Vierge", emoji: "♍", order: 6 },
+    { code: "libra", label: "Balance", emoji: "♎", order: 7 },
+    { code: "scorpio", label: "Scorpion", emoji: "♏", order: 8 },
+    { code: "sagittarius", label: "Sagittaire", emoji: "♐", order: 9 },
+    { code: "capricorn", label: "Capricorne", emoji: "♑", order: 10 },
+    { code: "aquarius", label: "Verseau", emoji: "♒", order: 11 },
+    { code: "pisces", label: "Poissons", emoji: "♓", order: 12 },
+  ];
+
+  for (const sign of zodiacSigns) {
+    await prisma.zodiacSign.upsert({
+      where: { code: sign.code },
+      update: sign,
+      create: sign,
+    });
+  }
+  console.log(`✅ ${zodiacSigns.length} zodiac signs seeded`);
+
+  // ============================================
+  // 3. ORIENTATIONS SEXUELLES
+  // ============================================
+  const orientations = [
+    { code: "hetero", label: "Hétérosexuel", emoji: "❤️", order: 1 },
+    { code: "homo", label: "Homosexuel", emoji: "🏳️‍🌈", order: 2 },
+    { code: "bi", label: "Bisexuel", emoji: "💜", order: 3 },
+    { code: "pan", label: "Pansexuel", emoji: "💗", order: 4 },
+    { code: "asexual", label: "Asexuel", emoji: "🖤", order: 5 },
+    { code: "questioning", label: "En questionnement", emoji: "❓", order: 6 },
+    { code: "other", label: "Autre", emoji: "➕", order: 7 },
+  ];
+
+  for (const orientation of orientations) {
+    await prisma.sexualOrientation.upsert({
+      where: { code: orientation.code },
+      update: orientation,
+      create: orientation,
+    });
+  }
+  console.log(`✅ ${orientations.length} sexual orientations seeded`);
+
+  // ============================================
+  // 4. STATUTS RELATIONNELS
+  // ============================================
+  const relationshipStatuses = [
+    { code: "single", label: "Célibataire", emoji: "💔", order: 1 },
+    { code: "couple", label: "En couple", emoji: "❤️", order: 2 },
+    { code: "complicated", label: "C'est compliqué", emoji: "🤷", order: 3 },
+    { code: "open", label: "Relation libre", emoji: "🔓", order: 4 },
+    { code: "divorced", label: "Divorcé", emoji: "💍", order: 5 },
+    { code: "widowed", label: "Veuf/Veuve", emoji: "🖤", order: 6 },
+  ];
+
+  for (const status of relationshipStatuses) {
+    await prisma.relationshipStatus.upsert({
+      where: { code: status.code },
+      update: status,
+      create: status,
+    });
+  }
+  console.log(`✅ ${relationshipStatuses.length} relationship statuses seeded`);
+
+  // ============================================
+  // 5. TEINTS DE PEAU
+  // ============================================
+  const skinTones = [
+    { code: "very-light", label: "Très clair", emoji: "🤍", order: 1 },
+    { code: "light", label: "Clair", emoji: "🤎", order: 2 },
+    { code: "medium", label: "Moyen", emoji: "🧡", order: 3 },
+    { code: "tanned", label: "Bronzé", emoji: "🟤", order: 4 },
+    { code: "brown", label: "Brun", emoji: "🟫", order: 5 },
+    { code: "dark", label: "Foncé", emoji: "🖤", order: 6 },
+  ];
+
+  for (const tone of skinTones) {
+    await prisma.skinTone.upsert({
+      where: { code: tone.code },
+      update: tone,
+      create: tone,
+    });
+  }
+  console.log(`✅ ${skinTones.length} skin tones seeded`);
+
+  // ============================================
+  // 6. TYPES DE PERSONNALITÉ
+  // ============================================
+  const personalityTypes = [
+    { code: "introvert", label: "Introverti", emoji: "🤫", order: 1 },
+    { code: "extrovert", label: "Extraverti", emoji: "🎉", order: 2 },
+    { code: "ambivert", label: "Ambivert", emoji: "⚖️", order: 3 },
+  ];
+
+  for (const type of personalityTypes) {
+    await prisma.personalityType.upsert({
+      where: { code: type.code },
+      update: type,
+      create: type,
+    });
+  }
+  console.log(`✅ ${personalityTypes.length} personality types seeded`);
+
+  // ============================================
+  // 7. NIVEAUX D'ÉDUCATION
+  // ============================================
+  const educationLevels = [
+    { code: "primary", label: "Primaire", emoji: "📖", order: 1 },
+    { code: "high-school", label: "Lycée", emoji: "🎓", order: 2 },
+    { code: "bachelor", label: "Licence", emoji: "📚", order: 3 },
+    { code: "master", label: "Master", emoji: "🏆", order: 4 },
+    { code: "doctorate", label: "Doctorat", emoji: "🎖️", order: 5 },
+    {
+      code: "vocational",
+      label: "Formation professionnelle",
+      emoji: "🔧",
+      order: 6,
+    },
+    { code: "other", label: "Autre", emoji: "➕", order: 7 },
+  ];
+
+  for (const level of educationLevels) {
+    await prisma.educationLevel.upsert({
+      where: { code: level.code },
+      update: level,
+      create: level,
+    });
+  }
+  console.log(`✅ ${educationLevels.length} education levels seeded`);
+
+  console.log("🎉 Reference data seeding complete!");
+}
+
+async function main() {
+  console.log("🌱 Starting seed with country-state-city...");
+
+  // ✨ L'ORDRE EST IMPORTANT
+  await seedNationalities(); // 1️⃣ D'abord les pays
+  await seedCities(); // 2️⃣ Puis les villes
+  await seedReferenceData(); // ✅ NOUVEAU - Données de préférences
+  await seedRBAC(); // 3️⃣ RBAC et admin
+  await seedCompanyRoles(); // 4️⃣ Rôles entreprise
+  await seedSubscriptions(); // 5️⃣ Abonnements
+  await seedReportCategories(); // 6️⃣ Signalements
+  await seedChatData(); // 7️⃣ Chat
+  await seedInterests(); // 8️⃣ Centres d'intérêt
+  await seedReactions(); // 9️⃣ Réactions
 
   console.log("🎉 Seed completed successfully!");
 }

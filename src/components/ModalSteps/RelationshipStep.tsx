@@ -10,10 +10,14 @@ const relationshipOptions: Option[] = [
   { id: "couple", label: "En couple" },
   { id: "complicated", label: "C'est compliqué" },
   { id: "open", label: "En relation libre" },
+  { id: "married", label: "Marié(e)" },
   { id: "prefer-not-say", label: "Je préfère ne pas le dire" },
 ];
 
-export default function RelationshipStep({ value, onSelect }: RelationshipStepProps) {
+export default function RelationshipStep({
+  value,
+  onSelect,
+}: RelationshipStepProps) {
   return (
     <>
       {/* Hero Image - Relationship */}

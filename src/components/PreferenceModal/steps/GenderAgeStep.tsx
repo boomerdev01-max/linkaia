@@ -1,37 +1,40 @@
-// src/components/PreferenceModal/steps/GenderAgeStep.tsx
+// src/components/PreferenceModal/steps/GenderAgeStep.tsx - MULTI-CHOIX
+import { Check } from "lucide-react";
 import { GENDER_OPTIONS } from "../types";
 
 interface GenderAgeStepProps {
-  genderPreference: string;
+  selectedGenderCodes: string[];
   ageMin: number;
   ageMax: number;
-  onGenderChange: (value: string) => void;
+  onGenderCodesChange: (codes: string[]) => void;
   onAgeMinChange: (value: number) => void;
   onAgeMaxChange: (value: number) => void;
 }
 
 export default function GenderAgeStep({
-  genderPreference,
+  selectedGenderCodes,
   ageMin,
   ageMax,
-  onGenderChange,
+  onGenderCodesChange,
   onAgeMinChange,
   onAgeMaxChange,
 }: GenderAgeStepProps) {
+  const handleToggleGender = (code: string) => {
+    if (selectedGenderCodes.includes(code)) {
+      onGenderCodesChange(selectedGenderCodes.filter((c) => c !== code));
+    } else {
+      onGenderCodesChange([...selectedGenderCodes, code]);
+    }
+  };
+
   return (
     <>
       {/* Hero Image */}
       <div className="relative h-85.75 w-full bg-linear-to-br from-primary via-secondary/50 to-accent/60 overflow-hidden shrink-0">
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="relative w-full h-full max-w-md">
-            <div className="text-8xl absolute top-1/4 left-1/4 animate-bounce">
-              👤
-            </div>
-            <div
-              className="text-8xl absolute bottom-1/4 right-1/4 animate-pulse"
-              style={{ animationDelay: "0.5s" }}
-            >
-              💫
+            <div className="text-8xl absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse">
+              💑
             </div>
           </div>
         </div>
@@ -39,56 +42,68 @@ export default function GenderAgeStep({
 
       {/* Form Content */}
       <div className="px-8 pt-5.5 pb-10">
-        <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-6">
-          Qui souhaitez-vous rencontrer ?
+        <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-2">
+          Genre recherché
         </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          {selectedGenderCodes.length === 0
+            ? "Aucun genre sélectionné"
+            : `${selectedGenderCodes.length} genre(s) sélectionné(s)`}
+        </p>
 
-        {/* Genre */}
-        <div className="mb-8">
-          <label className="block text-base font-semibold text-gray-800 mb-3">
-            Genre recherché
-          </label>
-          <div className="space-y-3">
-            {GENDER_OPTIONS.map((option) => (
+        {/* Gender Options - Multi-select */}
+        <div className="space-y-3 mb-8">
+          {GENDER_OPTIONS.map((option) => {
+            const isSelected = selectedGenderCodes.includes(option.code);
+
+            return (
               <div
-                key={option.id}
-                className={`flex items-center justify-between px-6 py-3.25 h-12.5 rounded-full cursor-pointer transition-all duration-200 border-2 ${
-                  genderPreference === option.id
+                key={option.code}
+                onClick={() => handleToggleGender(option.code)}
+                className={`flex items-center justify-between px-6 py-4 rounded-2xl cursor-pointer transition-all duration-200 border-2 ${
+                  isSelected
                     ? "bg-primary/10 border-primary"
                     : "bg-gray-50 border-transparent hover:bg-gray-100"
                 }`}
-                onClick={() => onGenderChange(option.id)}
               >
-                <span className="text-lg font-medium text-gray-800">
-                  {option.label}
-                </span>
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    genderPreference === option.id
-                      ? "border-primary bg-primary"
-                      : "border-gray-400"
-                  }`}
-                >
-                  {genderPreference === option.id && (
-                    <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                  )}
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{option.emoji}</span>
+                  <span className="text-lg font-medium text-gray-800">
+                    {option.label}
+                  </span>
                 </div>
+                {isSelected && <Check className="w-6 h-6 text-primary" />}
               </div>
-            ))}
+            );
+          })}
+        </div>
+
+        {/* Séparateur */}
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-gray-500">Tranche d'âge</span>
           </div>
         </div>
 
-        {/* Tranche d'âge */}
-        <div>
-          <label className="block text-base font-semibold text-gray-800 mb-4">
-            Tranche d'âge souhaitée
-          </label>
+        {/* Age Range */}
+        <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-2">
+          Âge recherché
+        </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          De {ageMin} à {ageMax} ans
+        </p>
 
+        <div className="space-y-4">
           {/* Age Min */}
-          <div className="mb-6">
+          <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600">Âge minimum</span>
-              <span className="text-xl font-bold text-primary">
+              <span className="text-sm font-medium text-gray-700">
+                Âge minimum
+              </span>
+              <span className="text-lg font-semibold text-primary">
                 {ageMin} ans
               </span>
             </div>
@@ -98,7 +113,7 @@ export default function GenderAgeStep({
               max="100"
               value={ageMin}
               onChange={(e) => onAgeMinChange(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               style={{
                 background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${
                   ((ageMin - 18) / 82) * 100
@@ -110,8 +125,10 @@ export default function GenderAgeStep({
           {/* Age Max */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600">Âge maximum</span>
-              <span className="text-xl font-bold text-primary">
+              <span className="text-sm font-medium text-gray-700">
+                Âge maximum
+              </span>
+              <span className="text-lg font-semibold text-primary">
                 {ageMax} ans
               </span>
             </div>
@@ -121,7 +138,7 @@ export default function GenderAgeStep({
               max="100"
               value={ageMax}
               onChange={(e) => onAgeMaxChange(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               style={{
                 background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${
                   ((ageMax - 18) / 82) * 100
@@ -131,19 +148,43 @@ export default function GenderAgeStep({
           </div>
         </div>
 
+        {/* Bottom Spacing */}
         <div className="h-24" />
       </div>
 
       <style jsx>{`
         input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none;
-          height: 24px;
+          appearance: none;
           width: 24px;
+          height: 24px;
           border-radius: 50%;
           background: #3b82f6;
           cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
           border: 2px solid white;
+          transition: all 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+          transform: scale(1.1);
+          background: #2563eb;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          border: 2px solid white;
+          transition: all 0.1s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+          transform: scale(1.1);
+          background: #2563eb;
         }
       `}</style>
     </>
