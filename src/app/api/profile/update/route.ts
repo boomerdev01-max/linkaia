@@ -285,7 +285,7 @@ function checkProfileCompletion(profile: any): boolean {
     profile.personalityType,
     profile.zodiacSign,
     profile.religion,
-    profile.loveAnimals, // ✅ Ajouté
+    profile.loveAnimals, 
   ];
 
   // Check if at least one field is filled and NOT "PREFER_NOT_TO_SAY"

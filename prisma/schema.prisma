@@ -605,64 +605,161 @@ model Preference {
   userId String @unique @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // === GENRE & ÂGE (Step 1) ===
-  genderPreference    String?   @map("gender_preference") // "man" | "woman" | "non-binary" | "both" | "any"
-  ageMin              Int?      @map("age_min") // 18
-  ageMax              Int?      @map("age_max") // 100
-  
-  // === APPARENCE (Step 2) ===
-  heightMin           Float?    @map("height_min") // en cm
-  heightMax           Float?    @map("height_max") // en cm
-  weightMin           Float?    @map("weight_min") // en kg
-  weightMax           Float?    @map("weight_max") // en kg
-  skinTonePreference  String?   @map("skin_tone_preference") // "very-light" | "light" | "medium" | "tanned" | "brown" | "dark" | "any"
-  
-  // === STATUT & ORIENTATION (Step 3) ===
-  relationshipStatusPreference String? @map("relationship_status_preference") // "single" | "couple" | "complicated" | "open" | "any"
-  sexualOrientationPreference  String? @map("sexual_orientation_preference") // "hetero" | "homo" | "bi" | "pan" | "asexual" | "any"
-  
-  // === CENTRES D'INTÉRÊT (Step 4) ===
-  interestsPreference String?   @map("interests_preference") // "any" | "specific"
-  // Si "specific", relation many-to-many avec Interest
-  
-  // === ÉDUCATION (Step 5) ===
-  educationLevelPreference String? @map("education_level_preference") // "high-school" | "bachelor" | "master" | "doctorate" | "any"
-  
-  // === ORIGINES (Step 6) ===
-  countryOriginPreference String? @map("country_origin_preference") // "any" | "specific"
-  // Si "specific", liste de pays/nationalités
-  
-  // === RÉSIDENCE (Step 7) ===
-  countryResidencePreference String? @map("country_residence_preference") // "any" | "specific"
-  locationPreference         String? @map("location_preference") // "any" | "specific"
-  // Si "specific", liste de villes
-  
-  // === HABITUDES (Step 8) ===
-  smokerPreference  String? @map("smoker_preference") // "never" | "sometimes" | "regularly" | "any"
-  alcoholPreference String? @map("alcohol_preference") // "never" | "socially" | "regularly" | "any"
-  
-  // === PROJET FAMILIAL (Step 9) ===
-  hasChildrenPreference  String? @map("has_children_preference") // "yes" | "no" | "soon" | "any"
-  wantsChildrenPreference String? @map("wants_children_preference") // "yes" | "no" | "maybe" | "any"
-  hasPetsPreference      String? @map("has_pets_preference") // "yes" | "no" | "want-one" | "any"
-  
-  // === PERSONNALITÉ (Step 10) ===
-  personalityTypePreference String? @map("personality_type_preference") // "introvert" | "extrovert" | "ambivert" | "any"
-  
-  // === CONVICTIONS (Step 11) ===
-  zodiacSignPreference String? @map("zodiac_sign_preference") // "aries" | "taurus" | ... | "any"
-  religionPreference   String? @map("religion_preference") // "atheist" | "christian" | "muslim" | ... | "any"
-  loveAnimalsPreference String? @map("love_animals_preference") // "yes" | "no" | "neutral" | "any"
+  // ÂGE
+  ageMin              Int?      @map("age_min")
+  ageMax              Int?      @map("age_max")
 
-  // === RELATIONS (Multi-valeurs) ===
-  selectedInterests      PreferenceInterest[]     // Max 10
-  selectedNationalities  PreferenceNationality[]  // Multiple
-  selectedCities         PreferenceCity[]         // Multiple
+  // APPARENCE (ranges seulement – les teints passent en many-to-many)
+  heightMin           Float?    @map("height_min")
+  heightMax           Float?    @map("height_max")
+  weightMin           Float?    @map("weight_min")
+  weightMax           Float?    @map("weight_max")
+
+  // HABITUDES
+  smokerPreference    String?   @map("smoker_preference")   // "never" | "sometimes" | "regularly" | "any"
+  alcoholPreference   String?   @map("alcohol_preference")  // "never" | "socially" | "regularly" | "any"
+
+  // PROJET FAMILIAL
+  hasChildrenPreference  String? @map("has_children_preference")
+  wantsChildrenPreference String? @map("wants_children_preference")
+  hasPetsPreference      String? @map("has_pets_preference")
+  loveAnimalsPreference  String? @map("love_animals_preference")
+
+  // RELATIONS MANY-TO-MANY (multi-sélection)
+  selectedGenders               PreferenceGender[]
+  selectedSkinTones             PreferenceSkinTone[]
+  selectedRelationshipStatuses  PreferenceRelationshipStatus[]
+  selectedSexualOrientations    PreferenceSexualOrientation[]
+  selectedInterests             PreferenceInterest[]
+  selectedEducationLevels       PreferenceEducationLevel[]
+  selectedNationalities         PreferenceNationality[]
+  selectedResidenceCountries    PreferenceResidenceCountry[]
+  selectedCities                PreferenceCity[]
+  selectedPersonalityTypes      PreferencePersonalityType[]
+  selectedZodiacSigns           PreferenceZodiacSign[]
+  selectedReligions             PreferenceReligion[]
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
 
   @@map("preferences")
+}
+
+// NOUVEAUX – multi-choix
+model PreferenceGender {
+  id           String     @id @default(uuid())
+  preferenceId String     @map("preference_id")
+  preference   Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  genderCode   String     @map("gender_code")   // "man", "woman", "non-binary"
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, genderCode])
+  @@map("preference_genders")
+}
+
+model PreferenceSkinTone {
+  id           String     @id @default(uuid())
+  preferenceId String     @map("preference_id")
+  preference   Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  skinToneId   String     @map("skin_tone_id")
+  skinTone     SkinTone   @relation(fields: [skinToneId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, skinToneId])
+  @@map("preference_skin_tones")
+}
+
+model PreferenceRelationshipStatus {
+  id                    String             @id @default(uuid())
+  preferenceId          String             @map("preference_id")
+  preference            Preference         @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  relationshipStatusId  String             @map("relationship_status_id")
+  relationshipStatus    RelationshipStatus @relation(fields: [relationshipStatusId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, relationshipStatusId])
+  @@map("preference_relationship_statuses")
+}
+
+model PreferenceSexualOrientation {
+  id                    String             @id @default(uuid())
+  preferenceId          String             @map("preference_id")
+  preference            Preference         @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  sexualOrientationId   String             @map("sexual_orientation_id")
+  sexualOrientation     SexualOrientation  @relation(fields: [sexualOrientationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, sexualOrientationId])
+  @@map("preference_sexual_orientations")
+}
+
+model PreferenceEducationLevel {
+  id                String         @id @default(uuid())
+  preferenceId      String         @map("preference_id")
+  preference        Preference     @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  educationLevelId  String         @map("education_level_id")
+  educationLevel    EducationLevel @relation(fields: [educationLevelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, educationLevelId])
+  @@map("preference_education_levels")
+}
+
+model PreferencePersonalityType {
+  id                 String          @id @default(uuid())
+  preferenceId       String          @map("preference_id")
+  preference         Preference      @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  personalityTypeId  String          @map("personality_type_id")
+  personalityType    PersonalityType @relation(fields: [personalityTypeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, personalityTypeId])
+  @@map("preference_personality_types")
+}
+
+model PreferenceZodiacSign {
+  id            String      @id @default(uuid())
+  preferenceId  String      @map("preference_id")
+  preference    Preference  @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  zodiacSignId  String      @map("zodiac_sign_id")
+  zodiacSign    ZodiacSign  @relation(fields: [zodiacSignId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, zodiacSignId])
+  @@map("preference_zodiac_signs")
+}
+
+model PreferenceReligion {
+  id           String     @id @default(uuid())
+  preferenceId String     @map("preference_id")
+  preference   Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  religionId   String     @map("religion_id")
+  religion     Religion   @relation(fields: [religionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, religionId])
+  @@map("preference_religions")
+}
+
+model PreferenceResidenceCountry {
+  id            String      @id @default(uuid())
+  preferenceId  String      @map("preference_id")
+  preference    Preference  @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  countryCode   String      @map("country_code")
+  country       Nationality @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([preferenceId, countryCode])
+  @@map("preference_residence_countries")
 }
 
 // ============================================
@@ -686,12 +783,12 @@ model PreferenceNationality {
   id            String      @id @default(uuid())
   preferenceId  String      @map("preference_id")
   preference    Preference  @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
-  nationalityId String      @map("nationality_id")
-  nationality   Nationality @relation(fields: [nationalityId], references: [id], onDelete: Cascade)
+  countryCode   String      @map("country_code") // Renommé pour plus de clarté
+  country       Nationality @relation(fields: [countryCode], references: [code], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([preferenceId, nationalityId])
+  @@unique([preferenceId, countryCode])
   @@map("preference_nationalities")
 }
 
@@ -721,55 +818,60 @@ model Profil {
   pseudo            String?   // Requis
   birthdate         DateTime? // Requis
   gender            String?   // Requis - "man" | "woman" | "non-binary" | "PREFER_NOT_TO_SAY"
-  
+
   // === PHOTOS (Step 2) ===
   profilePhotoUrl   String?   @map("profile_photo_url")
-  
+
   // === ORIENTATION & SITUATION (Step 3) ===
-  sexualOrientation String?   @map("sexual_orientation") // "hetero" | "homo" | "bi" | "pan" | "asexual" | "PREFER_NOT_TO_SAY"
-  relationshipStatus String?  @map("relationship_status") // "single" | "couple" | "complicated" | "open" | "PREFER_NOT_TO_SAY"
-  
+  sexualOrientation String?   @map("sexual_orientation")
+  relationshipStatus String?  @map("relationship_status")
+
   // === CENTRES D'INTÉRÊT (Step 4) ===
   // Relation many-to-many avec Interest
-  
+
   // === BIOGRAPHIE (Step 5) ===
-  bio               String?   // Max 500 caractères
-  
+  bio               String?
+
   // === APPARENCE (Step 6) ===
-  height            Float?    // en cm
-  weight            Float?    // en kg
-  skinTone          String?   @map("skin_tone") // "very-light" | "light" | "medium" | "tanned" | "brown" | "dark" | "PREFER_NOT_TO_SAY"
-  
+  height            Float?
+  weight            Float?
+  skinTone          String?   @map("skin_tone")
+
   // === ÉTUDES (Step 7) ===
-  educationLevel    String?   @map("education_level") // "high-school" | "bachelor" | "master" | "doctorate" | "PREFER_NOT_TO_SAY"
-  studyPlace        String?   @map("study_place") // Nom de l'établissement
-  
+  educationLevel    String?   @map("education_level")
+  studyPlace        String?   @map("study_place")
+
   // === TRAVAIL (Step 8) ===
-  jobTitle          String?   @map("job_title") // Poste occupé
-  companyName       String?   @map("company_name") // Nom de l'entreprise
-  
+  jobTitle          String?   @map("job_title")
+  companyName       String?   @map("company_name")
+
   // === ORIGINES (Step 9) ===
-  countryOrigin     String?   @map("country_origin") // Pays d'origine (choix unique)
-  // Nationalités (max 2) - relation many-to-many
+  countryOriginCode String?   @map("country_origin_code") // Code ISO du pays d'origine
+  countryOrigin     Nationality? @relation("origin_country", fields: [countryOriginCode], references: [code]) // Relation optionnelle
   
+  // Nationalités (max 2) - relation many-to-many via ProfilNationalite
+
   // === RÉSIDENCE (Step 10) ===
-  countryResidence  String?   @map("country_residence") // Pays de résidence
-  location          String?   // "Paris, France" (liste prédéfinie)
+  countryResidenceCode String?   @map("country_residence_code") // Code ISO du pays de résidence
+  countryResidence     Nationality? @relation("residence_country", fields: [countryResidenceCode], references: [code]) // Relation optionnelle
   
+  cityId            String?   @map("city_id") // Changé: liaison avec la table City au lieu de texte brut
+  city              City?     @relation(fields: [cityId], references: [id])
+
   // === HABITUDES (Step 11) ===
-  smoker            String?   // "never" | "sometimes" | "regularly" | "PREFER_NOT_TO_SAY"
-  alcohol           String?   // "never" | "socially" | "regularly" | "PREFER_NOT_TO_SAY"
-  
+  smoker            String?
+  alcohol           String?
+
   // === PROJET FAMILIAL & PERSONNALITÉ (Step 12) ===
-  hasChildren       String?   @map("has_children") // "yes" | "no" | "soon" | "PREFER_NOT_TO_SAY"
-  wantsChildren     String?   @map("wants_children") // "yes" | "no" | "maybe" | "PREFER_NOT_TO_SAY"
-  hasPets           String?   @map("has_pets") // "yes" | "no" | "want-one" | "PREFER_NOT_TO_SAY"
-  personalityType   String?   @map("personality_type") // "introvert" | "extrovert" | "ambivert" | "PREFER_NOT_TO_SAY"
-  
+  hasChildren       String?   @map("has_children")
+  wantsChildren     String?   @map("wants_children")
+  hasPets           String?   @map("has_pets")
+  personalityType   String?   @map("personality_type")
+
   // === CONVICTIONS (Step 13) ===
-  zodiacSign        String?   @map("zodiac_sign") // "aries" | "taurus" | ... | "PREFER_NOT_TO_SAY"
-  religion          String?   // "atheist" | "christian" | "muslim" | "jewish" | "buddhist" | "hindu" | "other" | "PREFER_NOT_TO_SAY"
-  loveAnimals       String?   @map("love_animals") // "yes" | "no" | "neutral" | "PREFER_NOT_TO_SAY"
+  zodiacSign        String?   @map("zodiac_sign")
+  religion          String?
+  loveAnimals       String?   @map("love_animals")
 
   // === RELATIONS (Multi-valeurs) ===
   nationalites ProfilNationalite[] // Max 2
@@ -841,6 +943,90 @@ model Interest {
   @@map("interests")
 }
 
+model Religion {
+  id        String                @id @default(uuid())
+  code      String                @unique
+  label     String
+  emoji     String
+  order     Int                   @default(0)
+
+  preferences PreferenceReligion[]
+
+  @@map("religions")
+}
+
+model ZodiacSign {
+  id        String                @id @default(uuid())
+  code      String                @unique
+  label     String
+  emoji     String
+  order     Int                   @default(0)
+
+  preferences PreferenceZodiacSign[]
+
+  @@map("zodiac_signs")
+}
+
+model SexualOrientation {
+  id        String                      @id @default(uuid())
+  code      String                      @unique
+  label     String
+  emoji     String
+  order     Int                         @default(0)
+
+  preferences PreferenceSexualOrientation[]
+
+  @@map("sexual_orientations")
+}
+
+model RelationshipStatus {
+  id        String                      @id @default(uuid())
+  code      String                      @unique
+  label     String
+  emoji     String
+  order     Int                         @default(0)
+
+  preferences PreferenceRelationshipStatus[]
+
+  @@map("relationship_statuses")
+}
+
+model SkinTone {
+  id        String                @id @default(uuid())
+  code      String                @unique
+  label     String
+  emoji     String
+  order     Int                   @default(0)
+
+  preferences PreferenceSkinTone[]
+
+  @@map("skin_tones")
+}
+
+model PersonalityType {
+  id        String                @id @default(uuid())
+  code      String                @unique
+  label     String
+  emoji     String
+  order     Int                   @default(0)
+
+  preferences PreferencePersonalityType[]
+
+  @@map("personality_types")
+}
+
+model EducationLevel {
+  id        String                @id @default(uuid())
+  code      String                @unique
+  label     String
+  emoji     String
+  order     Int                   @default(0)
+
+  preferences PreferenceEducationLevel[]
+
+  @@map("education_levels")
+}
+
 model ProfilInterest {
   id         String   @id @default(uuid())
   profilId   String   @map("profil_id")
@@ -864,10 +1050,15 @@ model Nationality {
   nameFr   String                @map("name_fr") // Nom en français
   nameEn   String                @map("name_en") // Nom en anglais
   flag     String                // Emoji drapeau 🇫🇷
-  profiles ProfilNationalite[]
-  preferences PreferenceNationality[]
+  
+  // Relations
+  profiles               ProfilNationalite[]
+  preferences            PreferenceNationality[]
+  originProfiles         Profil[]      @relation("origin_country")    // Profils avec ce pays d'origine
+  residenceProfiles      Profil[]      @relation("residence_country") // Profils résidant dans ce pays
 
   @@map("nationalities")
+  preferenceResidenceCountries PreferenceResidenceCountry[]
 }
 
 model ProfilNationalite {
@@ -885,18 +1076,29 @@ model ProfilNationalite {
 }
 
 // ============================================
-// VILLES PRÉDÉFINIES
+// VILLES PRÉDÉFINIES (✨ OPTIMISÉ avec country-state-city)
 // ============================================
 
 model City {
   id          String @id @default(uuid())
   name        String
-  countryCode String @map("country_code") // ISO 3166-1 alpha-2
-  countryName String @map("country_name")
-  displayName String @map("display_name") // "Paris, France"
-  preferences PreferenceCity[]
+  stateCode   String @map("state_code") // Code ISO de l'état (ex: "CA" pour Californie)
+  stateName   String @map("state_name") // Nom complet de l'état (ex: "Californie")
+  countryCode String @map("country_code") // Code ISO du pays (ex: "US")
+  countryName String @map("country_name") // Nom complet du pays (ex: "États-Unis")
+  displayName String @map("display_name") // Format: "Paris, Île-de-France, France"
+  
+  // Coordonnées GPS pour le matching géographique
+  latitude    Float?
+  longitude   Float?
 
-  @@unique([name, countryCode])
+  // Relations
+  preferences PreferenceCity[]
+  profiles     Profil[]         // Profils résidant dans cette ville
+
+  @@unique([name, stateCode, countryCode])
+  @@index([countryCode])
+  @@index([stateCode])
   @@map("cities")
 }
 

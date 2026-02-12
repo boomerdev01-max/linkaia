@@ -35,10 +35,9 @@ export default function PreferenceModal() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Form data with default values
   const [formData, setFormData] = useState<PreferenceFormData>({
     // Step 1: Genre & Âge
-    genderPreference: "",
+    selectedGenderCodes: [],
     ageMin: 18,
     ageMax: 35,
 
@@ -47,24 +46,23 @@ export default function PreferenceModal() {
     heightMax: 190,
     weightMin: 50,
     weightMax: 90,
-    skinTonePreference: "",
+    selectedSkinToneIds: [],
 
     // Step 3: Statut & Orientation
-    relationshipStatusPreference: "",
-    sexualOrientationPreference: "",
+    selectedRelationshipStatusIds: [],
+    selectedSexualOrientationIds: [],
 
     // Step 4: Centres d'intérêt
     selectedInterestIds: [],
 
     // Step 5: Éducation
-    educationLevelPreference: "",
+    selectedEducationLevelIds: [],
 
     // Step 6: Origines
-    countryOriginPreference: "",
-    selectedNationalityIds: [],
+    selectedNationalityCodes: [],
 
     // Step 7: Résidence
-    countryResidencePreference: "",
+    selectedResidenceCountryCodes: [],
     selectedCityIds: [],
 
     // Step 8: Habitudes
@@ -77,52 +75,70 @@ export default function PreferenceModal() {
     hasPetsPreference: "",
 
     // Step 10: Personnalité
-    personalityTypePreference: "",
+    selectedPersonalityTypeIds: [],
 
     // Step 11: Convictions
-    zodiacSignPreference: "",
-    religionPreference: "",
+    selectedZodiacSignIds: [],
+    selectedReligionIds: [],
     loveAnimalsPreference: "",
   });
 
-  // Reference data
   const [referenceData, setReferenceData] = useState<ReferenceData>({
+    religions: [],
+    zodiacSigns: [],
+    sexualOrientations: [],
+    relationshipStatuses: [],
+    skinTones: [],
+    personalityTypes: [],
+    educationLevels: [],
     interestCategories: [],
     cities: [],
     nationalities: [],
   });
 
-  // Auto-save callback
   const savePreference = useCallback(async (data: PreferenceFormData) => {
     try {
       await fetch("/api/preference/update", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          genderPreference: data.genderPreference || undefined,
+          selectedGenderCodes:
+            data.selectedGenderCodes.length > 0
+              ? data.selectedGenderCodes
+              : undefined,
           ageMin: data.ageMin,
           ageMax: data.ageMax,
           heightMin: data.heightMin,
           heightMax: data.heightMax,
           weightMin: data.weightMin,
           weightMax: data.weightMax,
-          skinTonePreference: data.skinTonePreference || undefined,
-          relationshipStatusPreference:
-            data.relationshipStatusPreference || undefined,
-          sexualOrientationPreference:
-            data.sexualOrientationPreference || undefined,
-          selectedInterestIds:
-            data.selectedInterestIds.length > 0
-              ? data.selectedInterestIds
+          selectedSkinToneIds:
+            data.selectedSkinToneIds.length > 0
+              ? data.selectedSkinToneIds
               : undefined,
-          educationLevelPreference: data.educationLevelPreference || undefined,
-          countryOriginPreference: data.countryOriginPreference || undefined,
-          selectedNationalityIds:
-            data.selectedNationalityIds.length > 0
-              ? data.selectedNationalityIds
+          selectedRelationshipStatusIds:
+            data.selectedRelationshipStatusIds.length > 0
+              ? data.selectedRelationshipStatusIds
               : undefined,
-          countryResidencePreference:
-            data.countryResidencePreference || undefined,
+          selectedSexualOrientationIds:
+            data.selectedSexualOrientationIds.length > 0
+              ? data.selectedSexualOrientationIds
+              : undefined,
+          // ✅ On envoie toujours selectedInterestIds, même vide ([])
+          // Un tableau vide signifie "Peu importe" et doit effacer les anciens choix
+          selectedInterestIds: data.selectedInterestIds,
+          selectedEducationLevelIds:
+            data.selectedEducationLevelIds.length > 0
+              ? data.selectedEducationLevelIds
+              : undefined,
+          selectedNationalityCodes:
+            data.selectedNationalityCodes.length > 0
+              ? data.selectedNationalityCodes
+              : undefined,
+          selectedResidenceCountryCodes:
+            data.selectedResidenceCountryCodes.length > 0
+              ? data.selectedResidenceCountryCodes
+              : undefined,
           selectedCityIds:
             data.selectedCityIds.length > 0 ? data.selectedCityIds : undefined,
           smokerPreference: data.smokerPreference || undefined,
@@ -130,10 +146,18 @@ export default function PreferenceModal() {
           hasChildrenPreference: data.hasChildrenPreference || undefined,
           wantsChildrenPreference: data.wantsChildrenPreference || undefined,
           hasPetsPreference: data.hasPetsPreference || undefined,
-          personalityTypePreference:
-            data.personalityTypePreference || undefined,
-          zodiacSignPreference: data.zodiacSignPreference || undefined,
-          religionPreference: data.religionPreference || undefined,
+          selectedPersonalityTypeIds:
+            data.selectedPersonalityTypeIds.length > 0
+              ? data.selectedPersonalityTypeIds
+              : undefined,
+          selectedZodiacSignIds:
+            data.selectedZodiacSignIds.length > 0
+              ? data.selectedZodiacSignIds
+              : undefined,
+          selectedReligionIds:
+            data.selectedReligionIds.length > 0
+              ? data.selectedReligionIds
+              : undefined,
           loveAnimalsPreference: data.loveAnimalsPreference || undefined,
           isTerminated: false,
         }),
@@ -143,58 +167,99 @@ export default function PreferenceModal() {
     }
   }, []);
 
-  // Auto-save with debounce
   const { isSaving } = useAutoSave(formData, savePreference, 2000);
 
-  // Load initial data
   useEffect(() => {
     async function loadData() {
       try {
-        // Load reference data
-        const refResponse = await fetch("/api/profile/reference-data");
-        const refData = await refResponse.json();
-        setReferenceData(refData);
+        // ✅ Les deux fetches en parallèle avec gestion d'erreur indépendante
+        const [refResponse, initResponse] = await Promise.all([
+          fetch("/api/profile/reference-data"),
+          fetch("/api/preference/init", { method: "POST" }),
+        ]);
 
-        // Initialize preference
-        const initResponse = await fetch("/api/preference/init", {
-          method: "POST",
-        });
-        const initData = await initResponse.json();
-
-        if (initData.preference) {
-          const pref = initData.preference;
-          setFormData({
-            genderPreference: pref.genderPreference || "",
-            ageMin: pref.ageMin ?? 18,
-            ageMax: pref.ageMax ?? 35,
-            heightMin: pref.heightMin ?? 150,
-            heightMax: pref.heightMax ?? 190,
-            weightMin: pref.weightMin ?? 50,
-            weightMax: pref.weightMax ?? 90,
-            skinTonePreference: pref.skinTonePreference || "",
-            relationshipStatusPreference:
-              pref.relationshipStatusPreference || "",
-            sexualOrientationPreference: pref.sexualOrientationPreference || "",
-            selectedInterestIds:
-              pref.selectedInterests?.map((i: any) => i.interestId) || [],
-            educationLevelPreference: pref.educationLevelPreference || "",
-            countryOriginPreference: pref.countryOriginPreference || "",
-            selectedNationalityIds:
-              pref.selectedNationalities?.map((n: any) => n.nationalityId) ||
-              [],
-            countryResidencePreference: pref.countryResidencePreference || "",
-            selectedCityIds:
-              pref.selectedCities?.map((c: any) => c.cityId) || [],
-            smokerPreference: pref.smokerPreference || "",
-            alcoholPreference: pref.alcoholPreference || "",
-            hasChildrenPreference: pref.hasChildrenPreference || "",
-            wantsChildrenPreference: pref.wantsChildrenPreference || "",
-            hasPetsPreference: pref.hasPetsPreference || "",
-            personalityTypePreference: pref.personalityTypePreference || "",
-            zodiacSignPreference: pref.zodiacSignPreference || "",
-            religionPreference: pref.religionPreference || "",
-            loveAnimalsPreference: pref.loveAnimalsPreference || "",
+        // ✅ Gestion explicite de l'échec du fetch reference-data
+        if (!refResponse.ok) {
+          console.error(
+            "❌ reference-data fetch failed:",
+            refResponse.status,
+            refResponse.statusText,
+          );
+          toast.error("Impossible de charger les centres d'intérêt");
+        } else {
+          const refData = await refResponse.json();
+          // ✅ Vérification défensive : s'assure que interestCategories est bien un tableau
+          setReferenceData({
+            ...refData,
+            interestCategories: Array.isArray(refData.interestCategories)
+              ? refData.interestCategories
+              : [],
           });
+        }
+
+        if (!initResponse.ok) {
+          console.error(
+            "❌ preference/init fetch failed:",
+            initResponse.status,
+            initResponse.statusText,
+          );
+        } else {
+          const initData = await initResponse.json();
+
+          if (initData.preference) {
+            const pref = initData.preference;
+
+            setFormData({
+              selectedGenderCodes:
+                pref.selectedGenders?.map((g: any) => g.genderCode) || [],
+              ageMin: pref.ageMin ?? 18,
+              ageMax: pref.ageMax ?? 35,
+              heightMin: pref.heightMin ?? 150,
+              heightMax: pref.heightMax ?? 190,
+              weightMin: pref.weightMin ?? 50,
+              weightMax: pref.weightMax ?? 90,
+              selectedSkinToneIds:
+                pref.selectedSkinTones?.map((st: any) => st.skinToneId) || [],
+              selectedRelationshipStatusIds:
+                pref.selectedRelationshipStatuses?.map(
+                  (rs: any) => rs.relationshipStatusId,
+                ) || [],
+              selectedSexualOrientationIds:
+                pref.selectedSexualOrientations?.map(
+                  (so: any) => so.sexualOrientationId,
+                ) || [],
+              selectedInterestIds:
+                pref.selectedInterests?.map((i: any) => i.interestId) || [],
+              selectedEducationLevelIds:
+                pref.selectedEducationLevels?.map(
+                  (el: any) => el.educationLevelId,
+                ) || [],
+              selectedNationalityCodes:
+                pref.selectedNationalities?.map((n: any) => n.countryCode) ||
+                [],
+              selectedResidenceCountryCodes:
+                pref.selectedResidenceCountries?.map(
+                  (rc: any) => rc.countryCode,
+                ) || [],
+              selectedCityIds:
+                pref.selectedCities?.map((c: any) => c.cityId) || [],
+              smokerPreference: pref.smokerPreference || "",
+              alcoholPreference: pref.alcoholPreference || "",
+              hasChildrenPreference: pref.hasChildrenPreference || "",
+              wantsChildrenPreference: pref.wantsChildrenPreference || "",
+              hasPetsPreference: pref.hasPetsPreference || "",
+              selectedPersonalityTypeIds:
+                pref.selectedPersonalityTypes?.map(
+                  (pt: any) => pt.personalityTypeId,
+                ) || [],
+              selectedZodiacSignIds:
+                pref.selectedZodiacSigns?.map((zs: any) => zs.zodiacSignId) ||
+                [],
+              selectedReligionIds:
+                pref.selectedReligions?.map((r: any) => r.religionId) || [],
+              loveAnimalsPreference: pref.loveAnimalsPreference || "",
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to load preference data:", error);
@@ -207,7 +272,6 @@ export default function PreferenceModal() {
     loadData();
   }, []);
 
-  // Navigation handlers
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(currentStep + 1);
@@ -229,9 +293,18 @@ export default function PreferenceModal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          selectedGenderCodes: formData.selectedGenderCodes,
+          selectedSkinToneIds: formData.selectedSkinToneIds,
+          selectedRelationshipStatusIds: formData.selectedRelationshipStatusIds,
+          selectedSexualOrientationIds: formData.selectedSexualOrientationIds,
           selectedInterestIds: formData.selectedInterestIds,
-          selectedNationalityIds: formData.selectedNationalityIds,
+          selectedEducationLevelIds: formData.selectedEducationLevelIds,
+          selectedNationalityCodes: formData.selectedNationalityCodes,
+          selectedResidenceCountryCodes: formData.selectedResidenceCountryCodes,
           selectedCityIds: formData.selectedCityIds,
+          selectedPersonalityTypeIds: formData.selectedPersonalityTypeIds,
+          selectedZodiacSignIds: formData.selectedZodiacSignIds,
+          selectedReligionIds: formData.selectedReligionIds,
           isTerminated: true,
         }),
       });
@@ -249,30 +322,34 @@ export default function PreferenceModal() {
     router.push("/home");
   };
 
-  // Validation par étape
   const hasSelection = () => {
     switch (currentStep) {
       case 0: // Genre & Âge
-        return !!(
-          formData.genderPreference ||
+        return (
+          formData.selectedGenderCodes.length > 0 ||
           formData.ageMin !== 18 ||
           formData.ageMax !== 35
         );
       case 1: // Apparence
         return true;
       case 2: // Statut & Orientation
-        return !!(
-          formData.relationshipStatusPreference ||
-          formData.sexualOrientationPreference
+        return (
+          formData.selectedRelationshipStatusIds.length > 0 ||
+          formData.selectedSexualOrientationIds.length > 0
         );
       case 3: // Centres d'intérêt
-        return formData.selectedInterestIds.length > 0;
+        // ✅ FIX : "Peu importe" (tableau vide) est une réponse valide → toujours true
+        // Un utilisateur qui ne sélectionne rien a explicitement choisi "peu importe"
+        return true;
       case 4: // Éducation
-        return !!formData.educationLevelPreference;
+        return formData.selectedEducationLevelIds.length > 0;
       case 5: // Origines
-        return formData.selectedNationalityIds.length > 0;
+        return formData.selectedNationalityCodes.length > 0;
       case 6: // Résidence
-        return formData.selectedCityIds.length > 0;
+        return (
+          formData.selectedResidenceCountryCodes.length > 0 ||
+          formData.selectedCityIds.length > 0
+        );
       case 7: // Habitudes
         return !!(formData.smokerPreference || formData.alcoholPreference);
       case 8: // Famille
@@ -282,12 +359,12 @@ export default function PreferenceModal() {
           formData.hasPetsPreference
         );
       case 9: // Personnalité
-        return !!formData.personalityTypePreference;
+        return formData.selectedPersonalityTypeIds.length > 0;
       case 10: // Convictions
-        return !!(
-          formData.zodiacSignPreference ||
-          formData.religionPreference ||
-          formData.loveAnimalsPreference
+        return (
+          formData.selectedZodiacSignIds.length > 0 ||
+          formData.selectedReligionIds.length > 0 ||
+          !!formData.loveAnimalsPreference
         );
       default:
         return false;
@@ -336,11 +413,11 @@ export default function PreferenceModal() {
             {/* Step 1: Genre & Âge */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <GenderAgeStep
-                genderPreference={formData.genderPreference}
+                selectedGenderCodes={formData.selectedGenderCodes}
                 ageMin={formData.ageMin}
                 ageMax={formData.ageMax}
-                onGenderChange={(v) =>
-                  setFormData((p) => ({ ...p, genderPreference: v }))
+                onGenderCodesChange={(codes: any) =>
+                  setFormData((p) => ({ ...p, selectedGenderCodes: codes }))
                 }
                 onAgeMinChange={(v) =>
                   setFormData((p) => ({ ...p, ageMin: v }))
@@ -358,7 +435,8 @@ export default function PreferenceModal() {
                 heightMax={formData.heightMax}
                 weightMin={formData.weightMin}
                 weightMax={formData.weightMax}
-                skinTonePreference={formData.skinTonePreference}
+                selectedSkinToneIds={formData.selectedSkinToneIds}
+                skinTones={referenceData.skinTones}
                 onHeightMinChange={(v) =>
                   setFormData((p) => ({ ...p, heightMin: v }))
                 }
@@ -371,8 +449,8 @@ export default function PreferenceModal() {
                 onWeightMaxChange={(v) =>
                   setFormData((p) => ({ ...p, weightMax: v }))
                 }
-                onSkinToneChange={(v) =>
-                  setFormData((p) => ({ ...p, skinTonePreference: v }))
+                onSkinToneIdsChange={(ids: any) =>
+                  setFormData((p) => ({ ...p, selectedSkinToneIds: ids }))
                 }
               />
             </div>
@@ -380,20 +458,25 @@ export default function PreferenceModal() {
             {/* Step 3: Statut & Orientation */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <RelationshipOrientationPreferenceStep
-                relationshipStatusPreference={
-                  formData.relationshipStatusPreference
+                selectedRelationshipStatusIds={
+                  formData.selectedRelationshipStatusIds
                 }
-                sexualOrientationPreference={
-                  formData.sexualOrientationPreference
+                selectedSexualOrientationIds={
+                  formData.selectedSexualOrientationIds
                 }
-                onRelationshipChange={(v) =>
+                relationshipStatuses={referenceData.relationshipStatuses}
+                sexualOrientations={referenceData.sexualOrientations}
+                onRelationshipStatusIdsChange={(ids: any) =>
                   setFormData((p) => ({
                     ...p,
-                    relationshipStatusPreference: v,
+                    selectedRelationshipStatusIds: ids,
                   }))
                 }
-                onOrientationChange={(v) =>
-                  setFormData((p) => ({ ...p, sexualOrientationPreference: v }))
+                onSexualOrientationIdsChange={(ids: any) =>
+                  setFormData((p) => ({
+                    ...p,
+                    selectedSexualOrientationIds: ids,
+                  }))
                 }
               />
             </div>
@@ -412,9 +495,10 @@ export default function PreferenceModal() {
             {/* Step 5: Éducation */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <EducationPreferenceStep
-                educationLevelPreference={formData.educationLevelPreference}
-                onEducationLevelChange={(v) =>
-                  setFormData((p) => ({ ...p, educationLevelPreference: v }))
+                selectedEducationLevelIds={formData.selectedEducationLevelIds}
+                educationLevels={referenceData.educationLevels}
+                onEducationLevelIdsChange={(ids: any) =>
+                  setFormData((p) => ({ ...p, selectedEducationLevelIds: ids }))
                 }
               />
             </div>
@@ -422,10 +506,13 @@ export default function PreferenceModal() {
             {/* Step 6: Origines */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <OriginsPreferenceStep
-                selectedNationalityIds={formData.selectedNationalityIds}
+                selectedNationalityCodes={formData.selectedNationalityCodes}
                 nationalities={referenceData.nationalities}
-                onNationalitiesChange={(ids) =>
-                  setFormData((p) => ({ ...p, selectedNationalityIds: ids }))
+                onNationalityCodesChange={(codes: any) =>
+                  setFormData((p) => ({
+                    ...p,
+                    selectedNationalityCodes: codes,
+                  }))
                 }
               />
             </div>
@@ -433,9 +520,19 @@ export default function PreferenceModal() {
             {/* Step 7: Résidence */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <ResidencePreferenceStep
+                selectedResidenceCountryCodes={
+                  formData.selectedResidenceCountryCodes
+                }
                 selectedCityIds={formData.selectedCityIds}
+                nationalities={referenceData.nationalities}
                 cities={referenceData.cities}
-                onCitiesChange={(ids) =>
+                onResidenceCountryCodesChange={(codes: any) =>
+                  setFormData((p) => ({
+                    ...p,
+                    selectedResidenceCountryCodes: codes,
+                  }))
+                }
+                onCityIdsChange={(ids: any) =>
                   setFormData((p) => ({ ...p, selectedCityIds: ids }))
                 }
               />
@@ -476,9 +573,13 @@ export default function PreferenceModal() {
             {/* Step 10: Personnalité */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <PersonalityPreferenceStep
-                personalityTypePreference={formData.personalityTypePreference}
-                onPersonalityChange={(v) =>
-                  setFormData((p) => ({ ...p, personalityTypePreference: v }))
+                selectedPersonalityTypeIds={formData.selectedPersonalityTypeIds}
+                personalityTypes={referenceData.personalityTypes}
+                onPersonalityTypeIdsChange={(ids: any) =>
+                  setFormData((p) => ({
+                    ...p,
+                    selectedPersonalityTypeIds: ids,
+                  }))
                 }
               />
             </div>
@@ -486,14 +587,16 @@ export default function PreferenceModal() {
             {/* Step 11: Convictions */}
             <div className="min-w-full h-full flex flex-col overflow-y-auto scrollbar-hide">
               <ConvictionsPreferenceStep
-                zodiacSignPreference={formData.zodiacSignPreference}
-                religionPreference={formData.religionPreference}
+                selectedZodiacSignIds={formData.selectedZodiacSignIds}
+                selectedReligionIds={formData.selectedReligionIds}
                 loveAnimalsPreference={formData.loveAnimalsPreference}
-                onZodiacChange={(v) =>
-                  setFormData((p) => ({ ...p, zodiacSignPreference: v }))
+                zodiacSigns={referenceData.zodiacSigns}
+                religions={referenceData.religions}
+                onZodiacSignIdsChange={(ids: any) =>
+                  setFormData((p) => ({ ...p, selectedZodiacSignIds: ids }))
                 }
-                onReligionChange={(v) =>
-                  setFormData((p) => ({ ...p, religionPreference: v }))
+                onReligionIdsChange={(ids: any) =>
+                  setFormData((p) => ({ ...p, selectedReligionIds: ids }))
                 }
                 onLoveAnimalsChange={(v) =>
                   setFormData((p) => ({ ...p, loveAnimalsPreference: v }))

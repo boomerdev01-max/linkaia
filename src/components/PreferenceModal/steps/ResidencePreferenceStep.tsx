@@ -1,51 +1,75 @@
-// src/components/PreferenceModal/steps/ResidencePreferenceStep.tsx
+// src/components/PreferenceModal/steps/ResidencePreferenceStep.tsx - CORRIGÉ
 import { useState } from "react";
-import { Check, Search, MapPin } from "lucide-react";
-import { City } from "@/components/ModalSteps/types";
+import { Check, Search, MapPin, Globe } from "lucide-react";
+import { City, Nationality } from "../types";
 
 interface ResidencePreferenceStepProps {
-  selectedCityIds: string[];
+  selectedResidenceCountryCodes: string[]; // ✅ Pays de résidence
+  selectedCityIds: string[]; // ✅ Villes spécifiques
+  nationalities: Nationality[];
   cities: City[];
-  onCitiesChange: (ids: string[]) => void;
+  onResidenceCountryCodesChange: (codes: string[]) => void;
+  onCityIdsChange: (ids: string[]) => void;
 }
 
 export default function ResidencePreferenceStep({
+  selectedResidenceCountryCodes,
   selectedCityIds,
+  nationalities,
   cities,
-  onCitiesChange,
+  onResidenceCountryCodesChange,
+  onCityIdsChange,
 }: ResidencePreferenceStepProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"countries" | "cities">(
+    "countries",
+  );
 
-  const isAnySelected = selectedCityIds.length === 0;
+  // Filtres
+  const filteredCountries = nationalities.filter((nat) =>
+    nat.nameFr.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   const filteredCities = cities.filter((city) =>
-    city.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+    city.displayName.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // Group cities by country
-  const citiesByCountry = filteredCities.reduce((acc, city) => {
-    if (!acc[city.countryName]) {
-      acc[city.countryName] = [];
-    }
-    acc[city.countryName].push(city);
-    return acc;
-  }, {} as Record<string, City[]>);
+  const citiesByCountry = filteredCities.reduce(
+    (acc, city) => {
+      if (!acc[city.countryName]) {
+        acc[city.countryName] = [];
+      }
+      acc[city.countryName].push(city);
+      return acc;
+    },
+    {} as Record<string, City[]>,
+  );
 
-  const handleToggleCity = (cityId: string) => {
-    if (selectedCityIds.includes(cityId)) {
-      onCitiesChange(selectedCityIds.filter((id) => id !== cityId));
+  const handleToggleCountry = (countryCode: string) => {
+    if (selectedResidenceCountryCodes.includes(countryCode)) {
+      onResidenceCountryCodesChange(
+        selectedResidenceCountryCodes.filter((code) => code !== countryCode),
+      );
     } else {
-      onCitiesChange([...selectedCityIds, cityId]);
+      onResidenceCountryCodesChange([
+        ...selectedResidenceCountryCodes,
+        countryCode,
+      ]);
     }
   };
 
-  const handleSetAny = () => {
-    onCitiesChange([]);
+  const handleToggleCity = (cityId: string) => {
+    if (selectedCityIds.includes(cityId)) {
+      onCityIdsChange(selectedCityIds.filter((id) => id !== cityId));
+    } else {
+      onCityIdsChange([...selectedCityIds, cityId]);
+    }
   };
 
   return (
     <>
-      {/* Hero Image — exactement comme WorkStep & EducationStep */}
+      {/* Hero Image */}
       <div className="relative h-85.75 w-full bg-linear-to-br from-accent via-secondary/50 to-primary overflow-hidden shrink-0">
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="relative w-full h-full max-w-md">
@@ -56,64 +80,94 @@ export default function ResidencePreferenceStep({
         </div>
       </div>
 
-      {/* Form Content — suit directement en dessous, même padding que les autres */}
+      {/* Form Content */}
       <div className="px-8 pt-5.5 pb-10">
         <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-2">
-          Lieu de ésidence recherchée
+          Lieu de résidence recherché
         </h2>
         <p className="text-sm text-gray-600 mb-6">
-          {isAnySelected
-            ? "Peu importe la localisation"
-            : `${selectedCityIds.length} ville(s) sélectionnée(s)`}
+          {selectedResidenceCountryCodes.length} pays • {selectedCityIds.length}{" "}
+          ville(s)
         </p>
 
-        {/* Option "Peu importe" */}
-        <div
-          className={`flex items-center justify-between px-6 py-3.25 h-12.5 rounded-full cursor-pointer transition-all duration-200 border-2 mb-6 ${
-            isAnySelected
-              ? "bg-primary/10 border-primary"
-              : "bg-gray-50 border-transparent hover:bg-gray-100"
-          }`}
-          onClick={handleSetAny}
-        >
-          <span className="text-lg font-medium text-gray-800">Peu importe</span>
-          <div
-            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-              isAnySelected ? "border-primary bg-primary" : "border-gray-400"
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab("countries")}
+            className={`flex-1 py-3 rounded-full font-medium transition-all ${
+              activeTab === "countries"
+                ? "bg-primary text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
-            {isAnySelected && (
-              <div className="w-2.5 h-2.5 bg-white rounded-full" />
-            )}
-          </div>
+            <Globe className="inline-block w-4 h-4 mr-2" />
+            Pays
+          </button>
+          <button
+            onClick={() => setActiveTab("cities")}
+            className={`flex-1 py-3 rounded-full font-medium transition-all ${
+              activeTab === "cities"
+                ? "bg-primary text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            <MapPin className="inline-block w-4 h-4 mr-2" />
+            Villes
+          </button>
         </div>
 
-        {!isAnySelected && (
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder={
+              activeTab === "countries"
+                ? "Rechercher un pays..."
+                : "Rechercher une ville..."
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        {/* Countries Tab */}
+        {activeTab === "countries" && (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredCountries.map((country) => {
+              const isSelected = selectedResidenceCountryCodes.includes(
+                country.code,
+              );
+
+              return (
+                <div
+                  key={country.code}
+                  onClick={() => handleToggleCountry(country.code)}
+                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2 ${
+                    isSelected
+                      ? "bg-primary/10 border-primary"
+                      : "bg-gray-50 border-transparent hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="text-2xl">{country.flag}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {country.nameFr}
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-5 h-5 text-primary shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Cities Tab */}
+        {activeTab === "cities" && (
           <>
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">
-                  Ou choisir spécifiquement
-                </span>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher une ville..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            {/* Cities by Country */}
             {Object.entries(citiesByCountry).map(([country, countryCities]) => (
               <div key={country} className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -149,7 +203,7 @@ export default function ResidencePreferenceStep({
           </>
         )}
 
-        {/* Espace en bas pour que le dernier champ ne colle pas le bas de l'écran */}
+        {/* Espace en bas */}
         <div className="h-24" />
       </div>
     </>

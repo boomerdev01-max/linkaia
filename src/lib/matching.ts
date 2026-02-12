@@ -15,7 +15,7 @@ interface MatchResult {
   matchedCriteria: string[];
   totalCriteria: number;
   age: number | null;
-  location: string | null;
+  location: string | null; // displayName de la ville
 }
 
 interface ScoreCalculation {
@@ -54,12 +54,12 @@ const SUBSCRIPTION_LIMITS = {
     maxScore: 90,
     dailyLimit: 50,
   },
-  platinum: {  
+  platinum: {
     minScore: 20,
     maxScore: 100,
     dailyLimit: null,
   },
-  platinium: {  // ✅ GARDE AUSSI "platinium" pour compatibilité
+  platinium: {
     minScore: 20,
     maxScore: 100,
     dailyLimit: null,
@@ -80,11 +80,11 @@ export async function getSuggestedProfiles(
   limit: number = 20,
 ): Promise<MatchResult[]> {
   try {
-    console.log('🔍 [MATCHING] Début getSuggestedProfiles', { 
-      userId, 
-      userLevel, 
+    console.log("🔍 [MATCHING] Début getSuggestedProfiles", {
+      userId,
+      userLevel,
       limit,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
     });
 
     // 1. Récupérer l'utilisateur connecté avec profil + préférences
@@ -99,6 +99,7 @@ export async function getSuggestedProfiles(
             interests: {
               include: { interest: true },
             },
+            city: true,
           },
         },
         preference: {
@@ -107,17 +108,28 @@ export async function getSuggestedProfiles(
               include: { interest: true },
             },
             selectedNationalities: {
-              include: { nationality: true },
+              // PreferenceNationality → relation "country" vers Nationality
+              include: { country: true },
             },
             selectedCities: {
               include: { city: true },
+            },
+            selectedGenders: true,
+            selectedSexualOrientations: {
+              include: { sexualOrientation: true },
+            },
+            selectedReligions: {
+              include: { religion: true },
+            },
+            selectedEducationLevels: {
+              include: { educationLevel: true },
             },
           },
         },
       },
     });
 
-    console.log('👤 [MATCHING] Current user:', {
+    console.log("👤 [MATCHING] Current user:", {
       found: !!currentUser,
       hasProfil: !!currentUser?.profil,
       hasPreference: !!currentUser?.preference,
@@ -125,32 +137,34 @@ export async function getSuggestedProfiles(
     });
 
     if (!currentUser) {
-      console.log('❌ [MATCHING] Utilisateur non trouvé');
+      console.log("❌ [MATCHING] Utilisateur non trouvé");
       return [];
     }
 
     if (!currentUser.profil) {
-      console.log('❌ [MATCHING] Profil incomplet - utilisateur doit compléter son profil');
+      console.log(
+        "❌ [MATCHING] Profil incomplet - utilisateur doit compléter son profil",
+      );
       return [];
     }
 
     if (!currentUser.preference) {
-      console.log('❌ [MATCHING] Préférences incomplètes - utilisateur doit définir ses préférences');
+      console.log(
+        "❌ [MATCHING] Préférences incomplètes - utilisateur doit définir ses préférences",
+      );
       return [];
     }
 
     const currentProfil = currentUser.profil;
     const currentPref = currentUser.preference;
 
-    console.log('✅ [MATCHING] Utilisateur valide avec profil et préférences');
+    console.log("✅ [MATCHING] Utilisateur valide avec profil et préférences");
 
     // 2. Récupérer les candidats potentiels
     const candidates = await prisma.user.findMany({
       where: {
         id: { not: userId },
         profil: { isNot: null },
-        // ⚠️ TEMPORAIREMENT COMMENTÉ POUR DEBUG
-        // emailVerified: true,
       },
       select: {
         id: true,
@@ -163,11 +177,17 @@ export async function getSuggestedProfiles(
             pseudo: true,
             profilePhotoUrl: true,
             birthdate: true,
-            location: true,
             gender: true,
             sexualOrientation: true,
             religion: true,
             educationLevel: true,
+            // city relation pour la localisation
+            city: {
+              select: {
+                id: true,
+                displayName: true,
+              },
+            },
             nationalites: {
               select: {
                 nationality: {
@@ -182,20 +202,21 @@ export async function getSuggestedProfiles(
                 },
               },
             },
+            updatedAt: true,
           },
         },
       },
       take: 400,
     });
 
-    console.log('📊 [MATCHING] Candidats bruts trouvés:', {
+    console.log("📊 [MATCHING] Candidats bruts trouvés:", {
       total: candidates.length,
-      withEmail: candidates.filter(c => c.emailVerified).length,
-      withoutEmail: candidates.filter(c => !c.emailVerified).length,
+      withEmail: candidates.filter((c) => c.emailVerified).length,
+      withoutEmail: candidates.filter((c) => !c.emailVerified).length,
     });
 
     if (candidates.length === 0) {
-      console.log('❌ [MATCHING] Aucun candidat disponible dans la base');
+      console.log("❌ [MATCHING] Aucun candidat disponible dans la base");
       return [];
     }
 
@@ -226,7 +247,7 @@ export async function getSuggestedProfiles(
         );
         // Stockage asynchrone (non bloquant)
         storeMatchScore(userId, candidate.id, scoreData).catch((err) =>
-          console.error('⚠️ [MATCHING] Erreur lors du stockage du score:', err),
+          console.error("⚠️ [MATCHING] Erreur lors du stockage du score:", err),
         );
       }
 
@@ -234,6 +255,9 @@ export async function getSuggestedProfiles(
         ? new Date().getFullYear() -
           new Date(candidate.profil.birthdate).getFullYear()
         : null;
+
+      // Localisation = displayName de la ville du candidat
+      const location = candidate.profil.city?.displayName ?? null;
 
       return {
         userId: candidate.id,
@@ -246,7 +270,7 @@ export async function getSuggestedProfiles(
         matchedCriteria: scoreData.matchedCriteria,
         totalCriteria: scoreData.totalCriteria,
         age,
-        location: candidate.profil.location ?? null,
+        location,
       } satisfies MatchResult;
     });
 
@@ -254,14 +278,16 @@ export async function getSuggestedProfiles(
       await Promise.all(scoredCandidatesPromises)
     ).filter((item): item is MatchResult => item !== null);
 
-    console.log('🎯 [MATCHING] Après calcul des scores:', {
+    console.log("🎯 [MATCHING] Après calcul des scores:", {
       total: scoredCandidates.length,
       scoreDistribution: {
-        '0-20': scoredCandidates.filter(c => c.score < 20).length,
-        '20-50': scoredCandidates.filter(c => c.score >= 20 && c.score < 50).length,
-        '50-90': scoredCandidates.filter(c => c.score >= 50 && c.score < 90).length,
-        '90-100': scoredCandidates.filter(c => c.score >= 90).length,
-      }
+        "0-20": scoredCandidates.filter((c) => c.score < 20).length,
+        "20-50": scoredCandidates.filter((c) => c.score >= 20 && c.score < 50)
+          .length,
+        "50-90": scoredCandidates.filter((c) => c.score >= 50 && c.score < 90)
+          .length,
+        "90-100": scoredCandidates.filter((c) => c.score >= 90).length,
+      },
     });
 
     // 4. Appliquer les restrictions du niveau d'abonnement
@@ -269,10 +295,14 @@ export async function getSuggestedProfiles(
       SUBSCRIPTION_LIMITS[userLevel as keyof typeof SUBSCRIPTION_LIMITS] ??
       SUBSCRIPTION_LIMITS.free;
 
-    console.log('📉 [MATCHING] Limites appliquées:', {
+    console.log("📉 [MATCHING] Limites appliquées:", {
       userLevel,
       limits,
-      limitesRecuperees: SUBSCRIPTION_LIMITS[userLevel as keyof typeof SUBSCRIPTION_LIMITS] ? 'Trouvées' : 'Fallback vers free'
+      limitesRecuperees: SUBSCRIPTION_LIMITS[
+        userLevel as keyof typeof SUBSCRIPTION_LIMITS
+      ]
+        ? "Trouvées"
+        : "Fallback vers free",
     });
 
     const filtered = scoredCandidates.filter(
@@ -281,7 +311,7 @@ export async function getSuggestedProfiles(
         (limits.maxScore === null || c.score <= limits.maxScore),
     );
 
-    console.log('🔽 [MATCHING] Après filtrage par niveau:', {
+    console.log("🔽 [MATCHING] Après filtrage par niveau:", {
       avant: scoredCandidates.length,
       après: filtered.length,
       exclus: scoredCandidates.length - filtered.length,
@@ -292,15 +322,17 @@ export async function getSuggestedProfiles(
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
-    console.log('✅ [MATCHING] Résultats finaux:', {
+    console.log("✅ [MATCHING] Résultats finaux:", {
       total: topMatches.length,
-      topScores: topMatches.slice(0, 5).map(m => ({ score: m.score, nom: m.prenom })),
+      topScores: topMatches
+        .slice(0, 5)
+        .map((m) => ({ score: m.score, nom: m.prenom })),
     });
 
     return topMatches;
   } catch (error) {
-    console.error('❌ [MATCHING] Erreur dans getSuggestedProfiles:', error);
-    console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    console.error("❌ [MATCHING] Erreur dans getSuggestedProfiles:", error);
+    console.error("Stack trace:", error instanceof Error ? error.stack : "N/A");
     return [];
   }
 }
@@ -318,40 +350,49 @@ function calculateCompatibilityScore(
   const matchedCriteria: string[] = [];
   let totalCriteria = 0;
 
+  // ─────────────────────────────────────────
   // 1. Genre
-  if (
-    userPreference.genderPreference &&
-    userPreference.genderPreference !== "any"
-  ) {
+  // selectedGenders est un tableau de { genderCode: string }
+  // ─────────────────────────────────────────
+  const preferredGenders: string[] =
+    userPreference.selectedGenders?.map((g: any) => g.genderCode) ?? [];
+
+  if (preferredGenders.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.gender;
     if (
       candidateProfil.gender === "PREFER_NOT_TO_SAY" ||
-      userPreference.genderPreference === candidateProfil.gender
+      preferredGenders.includes(candidateProfil.gender)
     ) {
       score += SCORE_WEIGHTS.gender;
       matchedCriteria.push("Genre");
     }
   }
 
+  // ─────────────────────────────────────────
   // 2. Orientation sexuelle
-  if (
-    userPreference.sexualOrientationPreference &&
-    userPreference.sexualOrientationPreference !== "any"
-  ) {
+  // selectedSexualOrientations → { sexualOrientation: { code } }
+  // ─────────────────────────────────────────
+  const preferredOrientations: string[] =
+    userPreference.selectedSexualOrientations?.map(
+      (o: any) => o.sexualOrientation.code,
+    ) ?? [];
+
+  if (preferredOrientations.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.sexualOrientation;
     if (
       candidateProfil.sexualOrientation === "PREFER_NOT_TO_SAY" ||
-      userPreference.sexualOrientationPreference ===
-        candidateProfil.sexualOrientation
+      preferredOrientations.includes(candidateProfil.sexualOrientation)
     ) {
       score += SCORE_WEIGHTS.sexualOrientation;
       matchedCriteria.push("Orientation");
     }
   }
 
+  // ─────────────────────────────────────────
   // 3. Âge
+  // ─────────────────────────────────────────
   if (
     candidateProfil.birthdate &&
     (userPreference.ageMin || userPreference.ageMax)
@@ -370,92 +411,102 @@ function calculateCompatibilityScore(
     }
   }
 
-  // 4. Localisation
-  if (
-    userPreference.locationPreference &&
-    userPreference.locationPreference !== "any" &&
-    userPreference.selectedCities?.length > 0
-  ) {
+  // ─────────────────────────────────────────
+  // 4. Localisation (villes)
+  // selectedCities → { city: { id, displayName } }
+  // candidateProfil.city → { id, displayName }
+  // ─────────────────────────────────────────
+  const preferredCityIds: string[] =
+    userPreference.selectedCities?.map((c: any) => c.city.id) ?? [];
+
+  if (preferredCityIds.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.location;
-    const preferredLocations = userPreference.selectedCities.map(
-      (c: any) => c.city.displayName,
-    );
     if (
-      candidateProfil.location &&
-      preferredLocations.includes(candidateProfil.location)
+      candidateProfil.city?.id &&
+      preferredCityIds.includes(candidateProfil.city.id)
     ) {
       score += SCORE_WEIGHTS.location;
       matchedCriteria.push("Localisation");
     }
   }
 
+  // ─────────────────────────────────────────
   // 5. Nationalité
-  if (
-    userPreference.countryOriginPreference &&
-    userPreference.countryOriginPreference !== "any" &&
-    userPreference.selectedNationalities?.length > 0
-  ) {
+  // selectedNationalities → { country: { code } }  (relation "country" dans PreferenceNationality)
+  // candidateProfil.nationalites → { nationality: { code } }
+  // ─────────────────────────────────────────
+  const preferredNatCodes: string[] =
+    userPreference.selectedNationalities?.map((n: any) => n.country.code) ?? [];
+
+  if (preferredNatCodes.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.nationality;
-    const preferredCodes = userPreference.selectedNationalities.map(
-      (n: any) => n.nationality.code,
-    );
-    const candidateCodes =
+    const candidateCodes: string[] =
       candidateProfil.nationalites?.map((n: any) => n.nationality.code) ?? [];
-    if (candidateCodes.some((code: string) => preferredCodes.includes(code))) {
+    if (
+      candidateCodes.some((code: string) => preferredNatCodes.includes(code))
+    ) {
       score += SCORE_WEIGHTS.nationality;
       matchedCriteria.push("Nationalité");
     }
   }
 
+  // ─────────────────────────────────────────
   // 6. Religion
-  if (
-    userPreference.religionPreference &&
-    userPreference.religionPreference !== "any"
-  ) {
+  // selectedReligions → { religion: { code } }
+  // ─────────────────────────────────────────
+  const preferredReligions: string[] =
+    userPreference.selectedReligions?.map((r: any) => r.religion.code) ?? [];
+
+  if (preferredReligions.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.religion;
     if (
       candidateProfil.religion === "PREFER_NOT_TO_SAY" ||
-      userPreference.religionPreference === candidateProfil.religion
+      preferredReligions.includes(candidateProfil.religion)
     ) {
       score += SCORE_WEIGHTS.religion;
       matchedCriteria.push("Religion");
     }
   }
 
+  // ─────────────────────────────────────────
   // 7. Niveau d'éducation
-  if (
-    userPreference.educationLevelPreference &&
-    userPreference.educationLevelPreference !== "any"
-  ) {
+  // selectedEducationLevels → { educationLevel: { code } }
+  // ─────────────────────────────────────────
+  const preferredEducation: string[] =
+    userPreference.selectedEducationLevels?.map(
+      (e: any) => e.educationLevel.code,
+    ) ?? [];
+
+  if (preferredEducation.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.educationLevel;
     if (
       candidateProfil.educationLevel === "PREFER_NOT_TO_SAY" ||
-      userPreference.educationLevelPreference === candidateProfil.educationLevel
+      preferredEducation.includes(candidateProfil.educationLevel)
     ) {
       score += SCORE_WEIGHTS.educationLevel;
       matchedCriteria.push("Éducation");
     }
   }
 
+  // ─────────────────────────────────────────
   // 8. Centres d'intérêt
-  if (
-    userPreference.interestsPreference &&
-    userPreference.interestsPreference !== "any" &&
-    userPreference.selectedInterests?.length > 0
-  ) {
+  // selectedInterests → { interest: { id } }
+  // candidateProfil.interests → { interest: { id } }
+  // ─────────────────────────────────────────
+  const preferredInterestIds: string[] =
+    userPreference.selectedInterests?.map((i: any) => i.interest.id) ?? [];
+
+  if (preferredInterestIds.length > 0) {
     totalCriteria++;
     maxScore += SCORE_WEIGHTS.interests;
-    const preferredIds = userPreference.selectedInterests.map(
-      (i: any) => i.interest.id,
-    );
-    const candidateIds =
+    const candidateInterestIds: string[] =
       candidateProfil.interests?.map((i: any) => i.interest.id) ?? [];
-    const commonCount = preferredIds.filter((id: string) =>
-      candidateIds.includes(id),
+    const commonCount = preferredInterestIds.filter((id: string) =>
+      candidateInterestIds.includes(id),
     ).length;
     if (commonCount > 0) {
       score += SCORE_WEIGHTS.interests;
@@ -507,7 +558,7 @@ async function getValidMatchScore(
 
     return null;
   } catch (err) {
-    console.error('⚠️ [MATCHING] Erreur getValidMatchScore:', err);
+    console.error("⚠️ [MATCHING] Erreur getValidMatchScore:", err);
     return null;
   }
 }
@@ -539,7 +590,7 @@ async function storeMatchScore(
       },
     });
   } catch (err) {
-    console.error('⚠️ [MATCHING] Erreur storeMatchScore:', err);
+    console.error("⚠️ [MATCHING] Erreur storeMatchScore:", err);
   }
 }
 
@@ -547,8 +598,6 @@ async function storeMatchScore(
 // COMPTAGE DES MATCHS CACHÉS
 // ============================================
 export async function getHiddenMatchesCount(userId: string, userLevel: string) {
-  // Pour l'instant on retourne 0 – implémentation complète très coûteuse
-  // → à faire seulement si vraiment nécessaire et avec pagination + cache
   return { hiddenGoodMatches: 0, hiddenPerfectMatches: 0 };
 }
 

@@ -26,7 +26,7 @@ async function getUserRoles(supabaseUserId: string): Promise<string[]> {
   });
 
   if (!user) return [];
-  return user.roles.map((userRole) => userRole.role.name);
+  return user.roles.map((userRole: { role: { name: any; }; }) => userRole.role.name);
 }
 
 /**

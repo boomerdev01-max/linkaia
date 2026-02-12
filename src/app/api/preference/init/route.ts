@@ -1,4 +1,4 @@
-// src/app/api/preference/init/route.ts
+// src/app/api/preference/init/route.ts - VERSION CORRIGÉE
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
@@ -19,6 +19,17 @@ export async function POST(request: NextRequest) {
       include: {
         preference: {
           include: {
+            // ✅ RELATIONS MANY-TO-MANY CORRIGÉES
+            selectedGenders: true,
+            selectedSkinTones: {
+              include: { skinTone: true },
+            },
+            selectedRelationshipStatuses: {
+              include: { relationshipStatus: true },
+            },
+            selectedSexualOrientations: {
+              include: { sexualOrientation: true },
+            },
             selectedInterests: {
               include: {
                 interest: {
@@ -28,15 +39,32 @@ export async function POST(request: NextRequest) {
                 },
               },
             },
+            selectedEducationLevels: {
+              include: { educationLevel: true },
+            },
             selectedNationalities: {
               include: {
-                nationality: true,
+                country: true, // ✅ FIXÉ : "country" au lieu de "nationality"
+              },
+            },
+            selectedResidenceCountries: {
+              include: {
+                country: true, // ✅ FIXÉ
               },
             },
             selectedCities: {
               include: {
                 city: true,
               },
+            },
+            selectedPersonalityTypes: {
+              include: { personalityType: true },
+            },
+            selectedZodiacSigns: {
+              include: { zodiacSign: true },
+            },
+            selectedReligions: {
+              include: { religion: true },
             },
           },
         },
@@ -54,6 +82,16 @@ export async function POST(request: NextRequest) {
           userId: user.id,
         },
         include: {
+          selectedGenders: true,
+          selectedSkinTones: {
+            include: { skinTone: true },
+          },
+          selectedRelationshipStatuses: {
+            include: { relationshipStatus: true },
+          },
+          selectedSexualOrientations: {
+            include: { sexualOrientation: true },
+          },
           selectedInterests: {
             include: {
               interest: {
@@ -63,15 +101,32 @@ export async function POST(request: NextRequest) {
               },
             },
           },
+          selectedEducationLevels: {
+            include: { educationLevel: true },
+          },
           selectedNationalities: {
             include: {
-              nationality: true,
+              country: true,
+            },
+          },
+          selectedResidenceCountries: {
+            include: {
+              country: true,
             },
           },
           selectedCities: {
             include: {
               city: true,
             },
+          },
+          selectedPersonalityTypes: {
+            include: { personalityType: true },
+          },
+          selectedZodiacSigns: {
+            include: { zodiacSign: true },
+          },
+          selectedReligions: {
+            include: { religion: true },
           },
         },
       });
@@ -90,7 +145,7 @@ export async function POST(request: NextRequest) {
     console.error("❌ Error initializing preference:", error);
     return NextResponse.json(
       { error: "Failed to initialize preference" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
