@@ -2,15 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { cn } from "@/lib/utils";
-import {
-  Phone,
-  Video,
-  MoreVertical,
-  ChevronLeft,
-  Search,
-  Loader2,
-} from "lucide-react";
+import { Phone, Video, MoreVertical, ChevronLeft, Loader2 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
@@ -23,6 +15,7 @@ interface ConversationViewProps {
   conversation: ConversationListItem;
   currentUserId: string;
   currentUserName: string;
+  currentUserPhoto?: string | null; // ✅ ajout pour l'optimistic UI
   onBack?: () => void;
   onOpenInfo?: () => void;
 }
@@ -31,6 +24,7 @@ export function ConversationView({
   conversation,
   currentUserId,
   currentUserName,
+  currentUserPhoto,
   onBack,
   onOpenInfo,
 }: ConversationViewProps) {
@@ -48,6 +42,10 @@ export function ConversationView({
     fetchMessages,
     loadMore,
     addMessage,
+    addOptimisticMessage, // ✅ nouveau
+    confirmOptimisticMessage, // ✅ nouveau
+    markMessageError, // ✅ nouveau
+    fetchSingleMessage, // ✅ nouveau
     updateMessage,
     removeMessage,
     updateReactions,
@@ -64,22 +62,45 @@ export function ConversationView({
     currentUserName,
   });
 
-  useRealtimeMessages({
-    conversationId: conversation.id,
-    onNewMessage: (message) => {
-      if (message.sender.id !== currentUserId) {
-        addMessage(message);
-      }
+  // ── Realtime ─────────────────────────────────────────────────────────────
+  // Callbacks stables pour éviter les re-subscribe inutiles
+  const handleNewMessage = useCallback(
+    (message: Message) => {
+      addMessage(message);
     },
-    onMessageUpdate: (messageId, updates) => {
+    [addMessage],
+  );
+
+  const handleMessageUpdate = useCallback(
+    (messageId: string, updates: Partial<Message>) => {
       updateMessage(messageId, updates);
     },
-    onMessageDelete: (messageId) => {
+    [updateMessage],
+  );
+
+  const handleMessageDelete = useCallback(
+    (messageId: string) => {
       removeMessage(messageId);
     },
-    onReactionChange: (messageId, reactions) => {
+    [removeMessage],
+  );
+
+  const handleReactionChange = useCallback(
+    (messageId: string, reactions: Message["reactions"]) => {
       updateReactions(messageId, reactions);
     },
+    [updateReactions],
+  );
+
+  // ✅ useRealtimeMessages avec les nouveaux props requis
+  useRealtimeMessages({
+    conversationId: conversation.id,
+    currentUserId, // ✅ pour ignorer nos propres messages
+    onNewMessage: handleNewMessage,
+    onMessageUpdate: handleMessageUpdate,
+    onMessageDelete: handleMessageDelete,
+    onReactionChange: handleReactionChange,
+    onFetchSingleMessage: fetchSingleMessage, // ✅ fetch ciblé au lieu de toute la liste
   });
 
   // Initial fetch
@@ -99,28 +120,50 @@ export function ConversationView({
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    // Check if near top for loading more
     if (container.scrollTop < 100 && hasMore && !isLoadingMore) {
       loadMore();
     }
 
-    // Check if near bottom
     const isAtBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight <
       100;
     setIsNearBottom(isAtBottom);
   }, [hasMore, isLoadingMore, loadMore]);
 
+  // ── Handlers optimistic pour MessageInput ────────────────────────────────
+  const handleOptimisticMessage = useCallback(
+    (message: Message) => {
+      addOptimisticMessage(message);
+    },
+    [addOptimisticMessage],
+  );
+
+  const handleConfirmMessage = useCallback(
+    (tempId: string, realMessage: Message) => {
+      confirmOptimisticMessage(tempId, realMessage);
+    },
+    [confirmOptimisticMessage],
+  );
+
+  const handleErrorMessage = useCallback(
+    (tempId: string) => {
+      markMessageError(tempId);
+    },
+    [markMessageError],
+  );
+
+  // ── sendMessage wrappé pour stopper le typing et reset replyTo ──────────
   const handleSendMessage = useCallback(
     async (
       content: string,
       type: "TEXT" | "MEDIA" | "VOICE" | "MIXED",
       media?: any[],
       replyToId?: string,
-    ) => {
+    ): Promise<Message> => {
       stopTyping();
-      await sendMessage(content, type, media, replyToId);
+      const message = await sendMessage(content, type, media, replyToId);
       setReplyTo(null);
+      return message; // ✅ retourne le vrai Message pour que MessageInput confirme l'optimistic
     },
     [sendMessage, stopTyping],
   );
@@ -133,7 +176,7 @@ export function ConversationView({
     [editMessage],
   );
 
-  // Get display info for the conversation
+  // Display info
   const otherParticipant =
     conversation.type === "direct"
       ? conversation.participants.find((p) => p.userId !== currentUserId)?.user
@@ -154,7 +197,7 @@ export function ConversationView({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Header — identique à l'original */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white">
         {onBack && (
           <button
@@ -224,14 +267,12 @@ export function ConversationView({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 bg-linear-to-b from-slate-50 to-slate-100"
       >
-        {/* Loading more indicator */}
         {isLoadingMore && (
           <div className="flex justify-center py-2">
             <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
           </div>
         )}
 
-        {/* Initial loading */}
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 text-[#0F4C5C] animate-spin" />
@@ -242,32 +283,29 @@ export function ConversationView({
             <p className="text-sm">Commencez la conversation!</p>
           </div>
         ) : (
-          <>
-            {messages.map((message, index) => {
-              const prevMessage = messages[index - 1];
-              const showSender =
-                isGroup &&
-                (!prevMessage || prevMessage.sender.id !== message.sender.id);
+          messages.map((message, index) => {
+            const prevMessage = messages[index - 1];
+            const showSender =
+              isGroup &&
+              (!prevMessage || prevMessage.sender.id !== message.sender.id);
 
-              return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isOwnMessage={message.sender.id === currentUserId}
-                  showSender={showSender}
-                  currentUserId={currentUserId}
-                  onReact={(emoji) => toggleReaction(message.id, emoji)}
-                  onEdit={() => setEditingMessage(message)}
-                  onDelete={() => deleteMessage(message.id)}
-                  onPin={() => pinMessage(message.id, !message.isPinned)}
-                  onReply={() => setReplyTo(message)}
-                />
-              );
-            })}
-          </>
+            return (
+              <MessageBubble
+                key={message.tempId ?? message.id} // ✅ clé stable pour les optimistic
+                message={message}
+                isOwnMessage={message.sender.id === currentUserId}
+                showSender={showSender}
+                currentUserId={currentUserId}
+                onReact={(emoji) => toggleReaction(message.id, emoji)}
+                onEdit={() => setEditingMessage(message)}
+                onDelete={() => deleteMessage(message.id)}
+                onPin={() => pinMessage(message.id, !message.isPinned)}
+                onReply={() => setReplyTo(message)}
+              />
+            );
+          })
         )}
 
-        {/* Typing indicator */}
         {typingUsers.length > 0 && (
           <TypingIndicator userNames={typingUsers.map((u) => u.userName)} />
         )}
@@ -275,9 +313,15 @@ export function ConversationView({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* ✅ MessageInput avec les nouveaux callbacks optimistic */}
       <MessageInput
         conversationId={conversation.id}
+        currentUserId={currentUserId}
+        currentUserName={currentUserName}
+        currentUserPhoto={currentUserPhoto}
+        onOptimisticMessage={handleOptimisticMessage}
+        onConfirmMessage={handleConfirmMessage}
+        onErrorMessage={handleErrorMessage}
         onSendMessage={handleSendMessage}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}

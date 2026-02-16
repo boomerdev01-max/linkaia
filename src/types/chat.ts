@@ -45,6 +45,9 @@ export interface Message {
   reactions: MessageReaction[];
   replyTo?: Message | null;
   readBy?: { id: string; readAt: string }[];
+  // ✅ Champs pour l'optimistic UI
+  sendStatus?: "sending" | "sent" | "error"; // undefined = message reçu
+  tempId?: string; // ID temporaire côté client avant confirmation serveur
 }
 
 export interface ConversationParticipant {

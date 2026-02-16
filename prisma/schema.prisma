@@ -99,6 +99,10 @@ model User {
   reactions         Reaction[]
   notifications     Notification[]
 
+  stories           Story[]
+  storyViews        StoryView[]      @relation("StoryViews")
+  storyReactions    StoryReaction[]  @relation("StoryReactions")
+
   // MESSAGING RELATIONS
   conversationsCreated     Conversation[]
   conversationParticipants ConversationParticipant[]
@@ -567,6 +571,102 @@ model Comment {
   @@index([createdAt])
   @@map("comments")
 }
+
+model Story {
+  id        String   @id @default(uuid())
+  
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Une story peut contenir plusieurs slides (photos/vidéos/textes)
+  slides    StorySlide[]
+  
+  // Statistiques
+  viewsCount     Int      @default(0) @map("views_count")
+  reactionsCount Int      @default(0) @map("reactions_count")
+  
+  // Expiration (24h après création)
+  expiresAt DateTime @map("expires_at")
+  isExpired Boolean  @default(false) @map("is_expired") // Flag pour optimiser les queries
+  
+  // Relations
+  views     StoryView[]
+  reactions StoryReaction[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, expiresAt])
+  @@index([isExpired, expiresAt])
+  @@map("stories")
+}
+
+model StorySlide {
+  id      String @id @default(uuid())
+  
+  storyId String @map("story_id")
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  order   Int    @default(0) // Ordre d'affichage des slides (0, 1, 2...)
+  
+  type    String // "PHOTO" | "VIDEO" | "TEXT"
+  
+  // Pour PHOTO/VIDEO
+  mediaUrl     String? @map("media_url")
+  thumbnailUrl String? @map("thumbnail_url")
+  mimeType     String? @map("mime_type")
+  width        Int?
+  height       Int?
+  duration     Int?    // En secondes pour vidéo
+  
+  // Pour TEXT
+  textContent String? @map("text_content") @db.Text
+  bgColor     String? @map("bg_color") // Format: "#FF5733" ou "linear-gradient(...)"
+  textColor   String? @default("#FFFFFF") @map("text_color")
+  fontSize    String? @default("medium") @map("font_size") // "small" | "medium" | "large"
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([storyId, order])
+  @@map("story_slides")
+}
+
+model StoryView {
+  id       String   @id @default(uuid())
+  
+  storyId  String   @map("story_id")
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  viewerId String   @map("viewer_id")
+  viewer   User     @relation("StoryViews", fields: [viewerId], references: [id], onDelete: Cascade)
+  
+  viewedAt DateTime @default(now()) @map("viewed_at")
+
+  @@unique([storyId, viewerId])
+  @@index([storyId])
+  @@index([viewerId])
+  @@map("story_views")
+}
+
+model StoryReaction {
+  id       String   @id @default(uuid())
+  
+  storyId  String   @map("story_id")
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  userId   String   @map("user_id")
+  user     User     @relation("StoryReactions", fields: [userId], references: [id], onDelete: Cascade)
+  
+  emoji    String   // "❤️", "😂", "😮", "😢", "👍", "🔥"
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([storyId, userId])
+  @@index([storyId])
+  @@index([userId])
+  @@map("story_reactions")
+}
+
 
 // ============================================
 // NOTIFICATIONS SYSTEM
