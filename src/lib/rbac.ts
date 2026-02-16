@@ -31,8 +31,8 @@ export async function userHasPermission(
     if (!user) return false;
 
     // Extraire toutes les permissions de tous les rôles de l'utilisateur
-    const permissions = user.roles.flatMap((ur) =>
-      ur.role.permissions.map((rp) => rp.permission.name)
+    const permissions = user.roles.flatMap((ur: { role: { permissions: any[]; }; }) =>
+      ur.role.permissions.map((rp: { permission: { name: any; }; }) => rp.permission.name)
     );
 
     return permissions.includes(permissionName);
@@ -54,7 +54,7 @@ export async function getUserRoles(userId: string) {
       },
     });
 
-    return userRoles.map((ur) => ur.role);
+    return userRoles.map((ur: { role: any; }) => ur.role);
   } catch (error) {
     console.error("Erreur getUserRoles:", error);
     return [];
@@ -88,7 +88,7 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
     if (!user) return [];
 
     // Extraire toutes les permissions (sans doublons)
-    const permissions = user.roles.flatMap((ur) =>
+    const permissions = user.roles.flatMap((ur: { role: { permissions: any[]; }; }) =>
       ur.role.permissions.map((rp) => rp.permission.name)
     );
 
@@ -150,9 +150,9 @@ export async function getUserMenus(userId: string) {
     // Extraire tous les menus (avec gestion des doublons)
     const menusMap = new Map();
 
-    user.roles.forEach((ur) => {
+    user.roles.forEach((ur: { role: { permissions: any[]; }; }) => {
       ur.role.permissions.forEach((rp) => {
-        rp.permission.menus.forEach((mp) => {
+        rp.permission.menus.forEach((mp: { menu: any; }) => {
           const menu = mp.menu;
           if (!menusMap.has(menu.id)) {
             menusMap.set(menu.id, menu);
@@ -218,9 +218,9 @@ export async function getUserActions(userId: string) {
     // Extraire toutes les actions
     const actionsMap = new Map();
 
-    user.roles.forEach((ur) => {
+    user.roles.forEach((ur: { role: { permissions: any[]; }; }) => {
       ur.role.permissions.forEach((rp) => {
-        rp.permission.actions.forEach((pa) => {
+        rp.permission.actions.forEach((pa: { action: any; }) => {
           const action = pa.action;
           if (!actionsMap.has(action.id)) {
             actionsMap.set(action.id, action);
@@ -261,7 +261,7 @@ export async function userCanAccessAction(
 export async function isUserAdmin(userId: string): Promise<boolean> {
   try {
     const roles = await getUserRoles(userId);
-    return roles.some((role) => role.name === "administrator");
+    return roles.some((role: { name: string; }) => role.name === "administrator");
   } catch (error) {
     console.error("Erreur isUserAdmin:", error);
     return false;
@@ -274,7 +274,7 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
 export async function isUserStaff(userId: string): Promise<boolean> {
   try {
     const roles = await getUserRoles(userId);
-    return roles.some((role) => role.name !== "standard_user");
+    return roles.some((role: { name: string; }) => role.name !== "standard_user");
   } catch (error) {
     console.error("Erreur isUserStaff:", error);
     return false;
@@ -294,7 +294,7 @@ export async function getUserPrimaryRole(userId: string): Promise<string> {
     const rolePriority = ["administrator", "moderator", "accountant", "assistant", "standard_user"];
     
     for (const priority of rolePriority) {
-      if (roles.some((role) => role.name === priority)) {
+      if (roles.some((role: { name: string; }) => role.name === priority)) {
         return priority;
       }
     }

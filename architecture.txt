@@ -43,12 +43,20 @@ Linkaïa
 │   │   │       ├── profiles
 │   │   │       │   └── page.tsx
 │   │   │       └── roles
+│   │   │           ├── manage
+│   │   │           │   └── page.tsx
 │   │   │           └── page.tsx
 │   │   ├── api
 │   │   │   ├── admin
 │   │   │   │   ├── dashboard
 │   │   │   │   │   └── route.ts
+│   │   │   │   ├── permissions
+│   │   │   │   │   └── route.ts
 │   │   │   │   ├── roles
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   ├── permissions
+│   │   │   │   │   │   │   └── route.ts
+│   │   │   │   │   │   └── route.ts
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── users
 │   │   │   │       └── route.ts
@@ -84,6 +92,8 @@ Linkaïa
 │   │   │   │   │   └── route.ts
 │   │   │   │   ├── messages
 │   │   │   │   │   └── [id]
+│   │   │   │   │       ├── full
+│   │   │   │   │       │   └── route.ts
 │   │   │   │   │       ├── reactions
 │   │   │   │   │       │   └── route.ts
 │   │   │   │   │       └── route.ts
@@ -161,6 +171,16 @@ Linkaïa
 │   │   │   │   ├── categories
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── route.ts
+│   │   │   ├── stories
+│   │   │   │   ├── [id]
+│   │   │   │   │   ├── react
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── route.ts
+│   │   │   │   │   └── view
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── route.ts
+│   │   │   │   └── upload
+│   │   │   │       └── route.ts
 │   │   │   ├── subscriptions
 │   │   │   │   ├── cancel
 │   │   │   │   │   └── route.ts
@@ -250,7 +270,13 @@ Linkaïa
 │   │   │   ├── AdminHeader.tsx
 │   │   │   ├── AdminSidebar.tsx
 │   │   │   ├── RolesClient.tsx
-│   │   │   └── UserProfilesClient.tsx
+│   │   │   ├── UserProfilesClient.tsx
+│   │   │   └── roles
+│   │   │       ├── CreateRoleModal.tsx
+│   │   │       ├── DeleteRoleModal.tsx
+│   │   │       ├── EditRoleModal.tsx
+│   │   │       ├── PermissionsModal.tsx
+│   │   │       └── RoleManagementClient.tsx
 │   │   ├── auth
 │   │   │   ├── CompanyDocumentsUpload.tsx
 │   │   │   ├── CompanyLegalDetailsForm.tsx
@@ -277,6 +303,7 @@ Linkaïa
 │   │   │   └── CommentSection.tsx
 │   │   ├── home
 │   │   │   ├── CreatePostModal.tsx
+│   │   │   ├── CreateStoryModal.tsx
 │   │   │   ├── Header.tsx
 │   │   │   ├── HomeClient.tsx
 │   │   │   ├── LeftSidebar.tsx
@@ -286,6 +313,7 @@ Linkaïa
 │   │   │   ├── PostComposer.tsx
 │   │   │   ├── RightSidebar.tsx
 │   │   │   ├── StoryCarousel.tsx
+│   │   │   ├── StoryViewer.tsx
 │   │   │   ├── UserMenuPopup.tsx
 │   │   │   └── UserProfileButton.tsx
 │   │   ├── pricing
@@ -355,6 +383,7 @@ Linkaïa
 │   │   ├── redirect-logic.ts
 │   │   ├── roles-config.ts
 │   │   ├── server.ts
+│   │   ├── story-storage.ts
 │   │   ├── stripe-club.ts
 │   │   ├── stripe.ts
 │   │   ├── supabase
@@ -374,5 +403,4 @@ Linkaïa
 ├── tailwind.config.ts
 └── tsconfig.json
 
-135 directories, 240 files
-
+146 directories, 258 files

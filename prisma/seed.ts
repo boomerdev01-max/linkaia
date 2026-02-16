@@ -1,6 +1,7 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+
 // ✨ Import de country-state-city
 import { Country, State, City as CscCity } from "country-state-city";
 
@@ -392,29 +393,22 @@ async function seedRBAC() {
   console.log("🔑 Creating Permissions...");
 
   const permissionsData = [
-    // Gestion Utilisateurs
     { name: "user.read", description: "Consulter les utilisateurs" },
     { name: "user.create", description: "Créer des utilisateurs" },
     { name: "user.update", description: "Modifier les utilisateurs" },
     { name: "user.delete", description: "Supprimer les utilisateurs" },
     { name: "user.list", description: "Lister les utilisateurs" },
     { name: "user.profile", description: "Consulter les profils détaillés" },
-
-    // Gestion Rôles & Permissions
     { name: "role.read", description: "Consulter les rôles" },
     { name: "role.create", description: "Créer des rôles" },
     { name: "role.update", description: "Modifier les rôles" },
     { name: "role.delete", description: "Supprimer les rôles" },
     { name: "permission.manage", description: "Gérer les permissions" },
-
-    // Gestion Contenu
     { name: "post.read", description: "Consulter les posts" },
     { name: "post.moderate", description: "Modérer les posts" },
     { name: "post.delete", description: "Supprimer les posts" },
     { name: "comment.moderate", description: "Modérer les commentaires" },
     { name: "media.moderate", description: "Modérer les médias" },
-
-    // Gestion Financière
     { name: "transaction.read", description: "Consulter les transactions" },
     { name: "transaction.create", description: "Créer des transactions" },
     { name: "invoice.read", description: "Consulter les factures" },
@@ -424,19 +418,11 @@ async function seedRBAC() {
       name: "statistics.view",
       description: "Consulter les statistiques financières",
     },
-
-    // Gestion Communication
     { name: "notification.send", description: "Envoyer des notifications" },
     { name: "email.send", description: "Envoyer des emails" },
-
-    // Configuration système
     { name: "system.config", description: "Configurer le système" },
     { name: "system.logs", description: "Consulter les logs" },
-
-    // Codes Prestige
     { name: "prestige.manage", description: "Gérer les codes prestige" },
-
-    // Dashboard & Rapports
     { name: "dashboard.view", description: "Accéder au dashboard admin" },
     { name: "reports.view", description: "Consulter les rapports" },
     { name: "reports.export", description: "Exporter les rapports" },
@@ -454,12 +440,11 @@ async function seedRBAC() {
   console.log("✅ Permissions created");
 
   // ============================================
-  // 3. ACTIONS (API Endpoints)
+  // 3. ACTIONS
   // ============================================
   console.log("⚡ Creating Actions...");
 
   const actionsData = [
-    // Users
     {
       method: "GET",
       endpoint: "/api/admin/users",
@@ -485,8 +470,6 @@ async function seedRBAC() {
       endpoint: "/api/admin/users/:id",
       description: "Supprimer utilisateur",
     },
-
-    // Roles
     {
       method: "GET",
       endpoint: "/api/admin/roles",
@@ -503,8 +486,6 @@ async function seedRBAC() {
       endpoint: "/api/admin/roles/:id",
       description: "Supprimer rôle",
     },
-
-    // Posts
     {
       method: "GET",
       endpoint: "/api/admin/posts",
@@ -515,8 +496,6 @@ async function seedRBAC() {
       endpoint: "/api/admin/posts/:id",
       description: "Supprimer post",
     },
-
-    // Transactions
     {
       method: "GET",
       endpoint: "/api/admin/transactions",
@@ -527,8 +506,6 @@ async function seedRBAC() {
       endpoint: "/api/admin/statistics",
       description: "Statistiques",
     },
-
-    // Dashboard
     {
       method: "GET",
       endpoint: "/api/admin/dashboard",
@@ -554,20 +531,14 @@ async function seedRBAC() {
   console.log("✅ Actions created");
 
   // ============================================
-  // 4. MENUS (synchronisés avec adminConfig)
+  // 4. MENUS
   // ============================================
   console.log("📋 Creating Menus...");
 
-  // Menus Parents - ❌ RETIRER LES PATHS
   const menuUsers = await prisma.menu.upsert({
     where: { name: "Utilisateurs" },
-    update: { path: null, icon: "Users", order: 1 }, // ✅ path: null
-    create: {
-      name: "Utilisateurs",
-      path: null, // ✅ Pas de redirection
-      icon: "Users",
-      order: 1,
-    },
+    update: { path: null, icon: "Users", order: 1 },
+    create: { name: "Utilisateurs", path: null, icon: "Users", order: 1 },
   });
 
   const menuContent = await prisma.menu.upsert({
@@ -606,12 +577,7 @@ async function seedRBAC() {
   const menuComm = await prisma.menu.upsert({
     where: { name: "Communication" },
     update: { path: null, icon: "Bell", order: 5 },
-    create: {
-      name: "Communication",
-      path: null,
-      icon: "Bell",
-      order: 5,
-    },
+    create: { name: "Communication", path: null, icon: "Bell", order: 5 },
   });
 
   const menuConfig = await prisma.menu.upsert({
@@ -628,15 +594,8 @@ async function seedRBAC() {
   const menuFinance = await prisma.menu.upsert({
     where: { name: "Finances" },
     update: { path: null, icon: "Wallet", order: 7 },
-    create: {
-      name: "Finances",
-      path: null,
-      icon: "Wallet",
-      order: 7,
-    },
+    create: { name: "Finances", path: null, icon: "Wallet", order: 7 },
   });
-
-  // Sous-Menus - ✅ GARDER LES PATHS
 
   await prisma.menu.upsert({
     where: { name: "Profils Utilisateurs" },
@@ -811,13 +770,11 @@ async function seedRBAC() {
   console.log("✅ Menus created");
 
   // ============================================
-  // 5. ASSOCIATIONS ROLE-PERMISSIONS
+  // 5. ROLE-PERMISSIONS
   // ============================================
   console.log("🔗 Creating Role-Permission associations...");
 
-  // Administrator - FULL ACCESS
-  const adminPermissions = Object.keys(permissions);
-  for (const permKey of adminPermissions) {
+  for (const permKey of Object.keys(permissions)) {
     await prisma.rolePermission.upsert({
       where: {
         roleId_permissionId: {
@@ -833,7 +790,6 @@ async function seedRBAC() {
     });
   }
 
-  // Moderator - Content moderation
   const moderatorPerms = [
     "dashboard.view",
     "post.read",
@@ -860,7 +816,6 @@ async function seedRBAC() {
     });
   }
 
-  // Accountant - Finance only
   const accountantPerms = [
     "dashboard.view",
     "transaction.read",
@@ -888,7 +843,6 @@ async function seedRBAC() {
     });
   }
 
-  // Assistant - Limited support
   const assistantPerms = [
     "dashboard.view",
     "user.read",
@@ -916,11 +870,11 @@ async function seedRBAC() {
   console.log("✅ Role-Permission associations created");
 
   // ============================================
-  // 6. ASSOCIATIONS PERMISSION-ACTIONS
+  // 6. PERMISSION-ACTIONS
   // ============================================
   console.log("🔗 Creating Permission-Action associations...");
 
-  const permActionMap = {
+  const permActionMap: Record<string, string[]> = {
     "user.list": ["GET:/api/admin/users"],
     "user.read": ["GET:/api/admin/users/:id"],
     "user.create": ["POST:/api/admin/users"],
@@ -960,7 +914,7 @@ async function seedRBAC() {
   console.log("✅ Permission-Action associations created");
 
   // ============================================
-  // 7. ASSOCIATIONS MENU-PERMISSIONS
+  // 7. MENU-PERMISSIONS
   // ============================================
   console.log("🔗 Creating Menu-Permission associations...");
 
@@ -997,10 +951,7 @@ async function seedRBAC() {
             },
           },
           update: {},
-          create: {
-            menuId: menu.id,
-            permissionId: permissions[permKey].id,
-          },
+          create: { menuId: menu.id, permissionId: permissions[permKey].id },
         });
       }
     }
@@ -1009,23 +960,29 @@ async function seedRBAC() {
   console.log("✅ Menu-Permission associations created");
 
   // ============================================
-  // 8. CRÉER UN ADMIN PAR DÉFAUT
+  // 8. ADMIN PAR DÉFAUT
   // ============================================
   console.log("👤 Creating default admin user...");
 
   const adminEmail = "admin@linkaia.com";
   const adminPassword = "Admin@123";
 
-  // Vérifier si l'admin existe déjà
+  const { createSupabaseAuthUser, getSupabaseUserByEmail } =
+    await import("@/lib/supabase/admin-client");
+
+  // ✅ Client admin Supabase pour écrire l'app_metadata
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+
   let adminUser = await prisma.user.findUnique({
     where: { email: adminEmail },
   });
 
   if (!adminUser) {
-    // 1️⃣ Créer l'utilisateur dans Supabase Auth FIRST
-    const { createSupabaseAuthUser } =
-      await import("@/lib/supabase/admin-client");
-
     console.log("📝 Creating admin in Supabase Auth...");
 
     try {
@@ -1033,10 +990,15 @@ async function seedRBAC() {
         adminEmail,
         adminPassword,
         { nom: "Admin", prenom: "System" },
-        true, // emailConfirmed = true (pas besoin de vérification)
+        true,
       );
 
-      // 2️⃣ Créer l'utilisateur dans Prisma avec le supabaseId
+      // ✅ Écrire le rôle dans app_metadata pour que proxy.ts puisse le lire
+      //    sans appel DB (Edge Runtime compatible)
+      await supabaseAdmin.auth.admin.updateUserById(supabaseUser.id, {
+        app_metadata: { primary_role: "administrator" },
+      });
+
       const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
       adminUser = await prisma.user.create({
@@ -1044,8 +1006,8 @@ async function seedRBAC() {
           nom: "Admin",
           prenom: "System",
           email: adminEmail,
-          password: hashedPassword, // Hash Prisma (pour cohérence)
-          supabaseId: supabaseUser.id, // ✅ CLEF : Lier à Supabase
+          password: hashedPassword,
+          supabaseId: supabaseUser.id,
           provider: "email",
           emailVerified: true,
           adminCreated: true,
@@ -1055,15 +1017,10 @@ async function seedRBAC() {
         },
       });
 
-      console.log(
-        `✅ Admin user created in Prisma with supabaseId: ${supabaseUser.id}`,
-      );
+      console.log(`✅ Admin created with supabaseId: ${supabaseUser.id}`);
     } catch (error: any) {
       if (error?.message?.includes("User already registered")) {
-        console.log("⚠️  Admin email already exists in Supabase Auth");
-        console.log(
-          "💡 You need to manually link this user or delete from Supabase first",
-        );
+        console.log("⚠️ Admin email already exists in Supabase Auth");
         throw error;
       } else {
         throw error;
@@ -1072,38 +1029,36 @@ async function seedRBAC() {
   } else {
     console.log("ℹ️ Admin user already exists in Prisma");
 
-    // Si l'admin existe mais n'a pas de supabaseId (ancien seed), le corriger
     if (!adminUser.supabaseId) {
       console.log(
         "⚠️ Admin exists but has no supabaseId. Attempting to fix...",
       );
 
-      const { createSupabaseAuthUser, getSupabaseUserByEmail } =
-        await import("@/lib/supabase/admin-client");
-
       try {
-        // Vérifier si l'utilisateur existe déjà dans Supabase
         const existingSupabaseUser = await getSupabaseUserByEmail(adminEmail);
 
         if (existingSupabaseUser) {
-          // L'utilisateur existe dans Supabase, juste mettre à jour le lien
           console.log(
             `📎 Linking existing Supabase user: ${existingSupabaseUser.id}`,
           );
 
+          // ✅ Écrire app_metadata même pour un user Supabase existant
+          await supabaseAdmin.auth.admin.updateUserById(
+            existingSupabaseUser.id,
+            {
+              app_metadata: { primary_role: "administrator" },
+            },
+          );
+
           adminUser = await prisma.user.update({
             where: { email: adminEmail },
-            data: {
-              supabaseId: existingSupabaseUser.id,
-              emailVerified: true,
-            },
+            data: { supabaseId: existingSupabaseUser.id, emailVerified: true },
           });
 
           console.log(
             `✅ Admin linked with supabaseId: ${existingSupabaseUser.id}`,
           );
         } else {
-          // L'utilisateur n'existe pas dans Supabase, le créer
           console.log("📝 Creating admin in Supabase Auth...");
 
           const supabaseUser = await createSupabaseAuthUser(
@@ -1113,12 +1068,13 @@ async function seedRBAC() {
             true,
           );
 
+          await supabaseAdmin.auth.admin.updateUserById(supabaseUser.id, {
+            app_metadata: { primary_role: "administrator" },
+          });
+
           adminUser = await prisma.user.update({
             where: { email: adminEmail },
-            data: {
-              supabaseId: supabaseUser.id,
-              emailVerified: true,
-            },
+            data: { supabaseId: supabaseUser.id, emailVerified: true },
           });
 
           console.log(`✅ Admin fixed with new supabaseId: ${supabaseUser.id}`);
@@ -1128,23 +1084,24 @@ async function seedRBAC() {
         throw error;
       }
     } else {
+      // ✅ L'admin existe déjà avec un supabaseId — s'assurer que app_metadata est à jour
       console.log(`✅ Admin already has supabaseId: ${adminUser.supabaseId}`);
+      console.log("🔄 Syncing app_metadata...");
+
+      await supabaseAdmin.auth.admin.updateUserById(adminUser.supabaseId, {
+        app_metadata: { primary_role: "administrator" },
+      });
+
+      console.log("✅ app_metadata synced");
     }
   }
 
-  // Assigner le rôle administrator
   await prisma.userRole.upsert({
     where: {
-      userId_roleId: {
-        userId: adminUser.id,
-        roleId: roles.administrator.id,
-      },
+      userId_roleId: { userId: adminUser.id, roleId: roles.administrator.id },
     },
     update: {},
-    create: {
-      userId: adminUser.id,
-      roleId: roles.administrator.id,
-    },
+    create: { userId: adminUser.id, roleId: roles.administrator.id },
   });
 
   console.log("✅ Default admin user ready (admin@linkaia.com / Admin@123)");
