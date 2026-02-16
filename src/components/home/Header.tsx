@@ -1,4 +1,3 @@
-// components/home/Header.tsx
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
@@ -37,8 +36,10 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // ✅ Plus de pollingInterval — écoute Realtime uniquement
+  // On passe user.id pour que le hook ignore les messages envoyés par l'utilisateur lui-même
   const { unreadCount: messagesUnreadCount } = useUnreadMessages({
-    pollingInterval: 30000,
+    userId: user.id,
   });
 
   const navItems = [
