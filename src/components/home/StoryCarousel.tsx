@@ -60,12 +60,11 @@ const STATIC_STORIES = [
   { id: "static-4", name: "Lucas", initials: "LP", image: "🎮" },
 ];
 
-// ✅ TYPAGE EXPLICITE AVEC UNION DISCRIMINÉE
+// ✅ Un bloc = un utilisateur avec toutes ses stories
 type DisplayItem =
-  | { type: "user"; story: Story }
-  | { type: "user-empty" }
+  | { type: "user-own"; story: Story | null } // Propre story (peut être null si pas de story)
   | { type: "static"; static: (typeof STATIC_STORIES)[number] }
-  | { type: "real"; story: Story };
+  | { type: "real"; story: Story; userId: string }; // Story d'un autre user
 
 export default function StoryCarousel({ user }: StoryCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,6 +75,7 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
+  const [viewerStories, setViewerStories] = useState<Story[]>([]);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
 
   useEffect(() => {
@@ -89,8 +89,11 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
     try {
       setLoading(true);
       const response = await fetch("/api/stories");
+      if (!response.ok) {
+        console.error("Error fetching stories:", response.status);
+        return;
+      }
       const data = await response.json();
-
       if (data.success) {
         setStories(data.data.stories);
       }
@@ -101,21 +104,31 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
     }
   };
 
-  const handleStoryClick = (
-    index: number,
-    isUserStory: boolean,
-    isStatic: boolean,
-  ) => {
-    if (isUserStory) {
-      setShowCreateModal(true);
-    } else if (isStatic) {
-      toast.info("Ceci est un exemple de story");
-    } else {
-      const userStoryCount = stories.some((s) => s.userId === user.id) ? 1 : 0;
-      const realIndex = index - STATIC_STORIES.length - userStoryCount;
-      const otherUsersStories = stories.filter((s) => s.userId !== user.id);
+  // ✅ Récupérer la propre story de l'utilisateur
+  const userStory = stories.find((s) => s.userId === user.id) || null;
 
-      setViewerStartIndex(realIndex);
+  // ✅ Stories des autres utilisateurs (une par utilisateur)
+  const otherUsersStories = stories.filter((s) => s.userId !== user.id);
+
+  const handleStoryClick = (item: DisplayItem) => {
+    if (item.type === "user-own") {
+      if (item.story) {
+        // ✅ L'utilisateur a une story → il peut la voir
+        setViewerStories([item.story]);
+        setViewerStartIndex(0);
+        setShowViewer(true);
+      } else {
+        // Pas de story → ouvrir le créateur
+        setShowCreateModal(true);
+      }
+    } else if (item.type === "static") {
+      toast.info("Ceci est un exemple de story");
+    } else if (item.type === "real") {
+      const index = otherUsersStories.findIndex(
+        (s) => s.userId === item.userId,
+      );
+      setViewerStories(otherUsersStories);
+      setViewerStartIndex(Math.max(0, index));
       setShowViewer(true);
     }
   };
@@ -145,17 +158,18 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
     }
   };
 
-  // Construire la liste d'affichage avec le type correct
-  const userStory = stories.find((s) => s.userId === user.id);
-  const otherUsersStories = stories.filter((s) => s.userId !== user.id);
-
-  // ✅ LISTE TYPÉE EXPLICITEMENT
+  // ✅ Construire la liste d'affichage : 1 bloc = 1 utilisateur
   const displayItems: DisplayItem[] = [
-    ...(userStory
-      ? [{ type: "user" as const, story: userStory }]
-      : [{ type: "user-empty" as const }]),
+    // 1. Propre story (ou bouton créer)
+    { type: "user-own", story: userStory },
+    // 2. Stories statiques (placeholder)
     ...STATIC_STORIES.map((s) => ({ type: "static" as const, static: s })),
-    ...otherUsersStories.map((s) => ({ type: "real" as const, story: s })),
+    // 3. Une entrée par autre utilisateur
+    ...otherUsersStories.map((s) => ({
+      type: "real" as const,
+      story: s,
+      userId: s.userId,
+    })),
   ];
 
   return (
@@ -191,76 +205,162 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {displayItems.map((item, index) => {
-            const isUserStory =
-              item.type === "user" || item.type === "user-empty";
-            const isStatic = item.type === "static";
-            const isReal = item.type === "real";
+            // ─── Propre story ───────────────────────────────────────
+            if (item.type === "user-own") {
+              const hasStory = !!item.story;
+              const initials = `${user.prenom.charAt(0)}${user.nom.charAt(0)}`;
 
-            let name = "";
-            let initials = "";
-            let image = "";
-            let hasViewed = false;
-            let profilePhoto: string | null | undefined = null;
+              return (
+                <button
+                  key="user-own"
+                  onClick={() => handleStoryClick(item)}
+                  className="shrink-0 w-28.25 relative h-full group"
+                >
+                  <div
+                    className={`relative w-full h-full rounded-lg overflow-hidden ${
+                      hasStory
+                        ? "ring-2 ring-[#0F4C5C]"
+                        : "border-2 border-dashed border-gray-300 dark:border-gray-600"
+                    }`}
+                  >
+                    {/* Background */}
+                    <div className="absolute inset-0 bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+                      <span className="text-4xl">🌟</span>
+                    </div>
 
-            // ✅ TYPE NARROWING EXPLICITE
-            if (item.type === "user" || item.type === "user-empty") {
-              name = "Votre story";
-              initials = `${user.prenom.charAt(0)}${user.nom.charAt(0)}`;
-              image = "🌟";
-            } else if (item.type === "static") {
-              // TypeScript sait maintenant que item.static existe
-              name = item.static.name;
-              initials = item.static.initials;
-              image = item.static.image;
-            } else if (item.type === "real") {
-              // TypeScript sait maintenant que item.story existe
-              const story = item.story;
-              name =
-                story.user.profil?.pseudo ||
-                `${story.user.prenom} ${story.user.nom}`;
-              initials = `${story.user.prenom.charAt(0)}${story.user.nom.charAt(0)}`;
-              image = story.slides[0]?.type === "TEXT" ? "📝" : "📸";
-              hasViewed = story.hasViewed;
-              profilePhoto = story.user.profil?.profilePhotoUrl;
+                    {/* Avatar + badge */}
+                    <div className="absolute top-2 left-2">
+                      <div className="relative w-10 h-10 rounded-full border-2 border-white dark:border-gray-900">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {initials}
+                          </span>
+                        </div>
+                        {/* ✅ Si pas de story → icône + pour créer */}
+                        {!hasStory && (
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0F4C5C] rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
+                            <Plus className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        {/* ✅ Si a une story → icône œil pour voir */}
+                        {hasStory && (
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#FF5A5F] rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
+                            <span className="text-white text-[8px]">▶</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Barre de progression (si story existante) */}
+                    {hasStory && item.story && (
+                      <div className="absolute top-1 left-1 right-1 flex gap-0.5">
+                        {item.story.slides.map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 h-0.5 bg-white/80 rounded-full"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Nom */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-linear-to-t from-black/80 to-transparent">
+                      <p className="text-white font-medium text-sm text-left truncate">
+                        {hasStory ? "Votre story" : "Ajouter"}
+                      </p>
+                    </div>
+
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                  </div>
+                </button>
+              );
             }
 
-            const ringColor =
-              isUserStory || isStatic
-                ? "ring-gray-300"
-                : hasViewed
-                  ? "ring-gray-400"
-                  : "ring-gradient";
-
-            return (
-              <button
-                key={`${item.type}-${index}`}
-                onClick={() => handleStoryClick(index, isUserStory, isStatic)}
-                className="shrink-0 w-28.25 relative h-full group"
-              >
-                <div
-                  className={`relative w-full h-full rounded-lg overflow-hidden ${
-                    isUserStory && item.type === "user-empty"
-                      ? "border-2 border-dashed border-gray-300 dark:border-gray-600"
-                      : !hasViewed && !isUserStory && !isStatic
-                        ? "ring-2 ring-[#FF5A5F]"
-                        : "ring-1 ring-gray-200 dark:ring-gray-700"
-                  }`}
+            // ─── Story statique (placeholder) ───────────────────────
+            if (item.type === "static") {
+              return (
+                <button
+                  key={item.static.id}
+                  onClick={() => handleStoryClick(item)}
+                  className="shrink-0 w-28.25 relative h-full group"
                 >
-                  {/* Background */}
-                  <div className="absolute inset-0 bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
-                    <span className="text-4xl">{image}</span>
+                  <div className="relative w-full h-full rounded-lg overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700">
+                    <div className="absolute inset-0 bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+                      <span className="text-4xl">{item.static.image}</span>
+                    </div>
+                    <div className="absolute top-2 left-2">
+                      <div className="w-10 h-10 rounded-full ring-2 ring-gray-300 overflow-hidden bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">
+                          {item.static.initials}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-linear-to-t from-black/80 to-transparent">
+                      <p className="text-white font-medium text-sm text-left truncate">
+                        {item.static.name}
+                      </p>
+                    </div>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                   </div>
+                </button>
+              );
+            }
 
-                  {/* Avatar */}
-                  <div className="absolute top-2 left-2">
-                    <div
-                      className={`relative w-10 h-10 rounded-full ${
-                        isUserStory
-                          ? "border-2 border-white dark:border-gray-900"
-                          : "ring-2 ring-gray-300"
-                      }`}
-                    >
-                      <div className="w-full h-full rounded-full overflow-hidden bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+            // ─── Story d'un autre utilisateur ───────────────────────
+            if (item.type === "real") {
+              const story = item.story;
+              const name =
+                story.user.profil?.pseudo ||
+                `${story.user.prenom} ${story.user.nom}`;
+              const initials = `${story.user.prenom.charAt(0)}${story.user.nom.charAt(0)}`;
+              const profilePhoto = story.user.profil?.profilePhotoUrl;
+              const hasViewed = story.hasViewed;
+              const slideCount = story.slides.length;
+
+              return (
+                <button
+                  key={`real-${story.userId}`}
+                  onClick={() => handleStoryClick(item)}
+                  className="shrink-0 w-28.25 relative h-full group"
+                >
+                  <div
+                    className={`relative w-full h-full rounded-lg overflow-hidden ${
+                      hasViewed
+                        ? "ring-1 ring-gray-400"
+                        : "ring-2 ring-[#FF5A5F]"
+                    }`}
+                  >
+                    {/* Barres de progression en haut (1 barre par slide) */}
+                    {slideCount > 1 && (
+                      <div className="absolute top-1 left-1 right-1 z-10 flex gap-0.5">
+                        {story.slides.map((_, i) => (
+                          <div
+                            key={i}
+                            className={`flex-1 h-0.5 rounded-full ${
+                              hasViewed ? "bg-white/50" : "bg-white/80"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Background */}
+                    <div className="absolute inset-0 bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+                      <span className="text-4xl">
+                        {story.slides[0]?.type === "TEXT" ? "📝" : "📸"}
+                      </span>
+                    </div>
+
+                    {/* Avatar */}
+                    <div className="absolute top-2 left-2">
+                      <div
+                        className={`w-10 h-10 rounded-full overflow-hidden ${
+                          hasViewed
+                            ? "ring-2 ring-gray-400"
+                            : "ring-2 ring-[#FF5A5F]"
+                        }`}
+                      >
                         {profilePhoto ? (
                           <img
                             src={profilePhoto}
@@ -268,31 +368,30 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-white font-bold text-sm">
-                            {initials}
-                          </span>
+                          <div className="w-full h-full bg-linear-to-br from-[#0F4C5C] to-[#B88A4F] flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">
+                              {initials}
+                            </span>
+                          </div>
                         )}
                       </div>
-                      {isUserStory && item.type === "user-empty" && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0F4C5C] rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
-                          <Plus className="w-3 h-3 text-white" />
-                        </div>
-                      )}
                     </div>
-                  </div>
 
-                  {/* Name */}
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-linear-to-t from-black/80 to-transparent">
-                    <p className="text-white font-medium text-sm text-left truncate">
-                      {name}
-                    </p>
-                  </div>
+                    {/* Nom */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-linear-to-t from-black/80 to-transparent">
+                      <p className="text-white font-medium text-sm text-left truncate">
+                        {name}
+                      </p>
+                    </div>
 
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                </div>
-              </button>
-            );
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                  </div>
+                </button>
+              );
+            }
+
+            return null;
           })}
         </div>
 
@@ -304,7 +403,7 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
         `}</style>
       </div>
 
-      {/* Modals */}
+      {/* Modal création */}
       <CreateStoryModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -314,11 +413,15 @@ export default function StoryCarousel({ user }: StoryCarouselProps) {
         }}
       />
 
-      {showViewer && (
+      {/* Viewer */}
+      {showViewer && viewerStories.length > 0 && (
         <StoryViewer
-          stories={otherUsersStories}
+          stories={viewerStories}
           initialStoryIndex={viewerStartIndex}
-          onClose={() => setShowViewer(false)}
+          onClose={() => {
+            setShowViewer(false);
+            setViewerStories([]);
+          }}
           onStoryChange={(index) => setViewerStartIndex(index)}
         />
       )}

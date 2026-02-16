@@ -11,6 +11,7 @@ export default defineConfig({
   },
   datasource: {
     url: env("DATABASE_URL"),
+    // Connexion directe (port 5432)
     shadowDatabaseUrl: env("DIRECT_URL"),
   },
 });

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (!slides || !Array.isArray(slides) || slides.length === 0) {
       return NextResponse.json(
         { success: false, error: "Au moins un slide requis" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -30,14 +30,14 @@ export async function POST(request: NextRequest) {
       if (!slide.type || !["PHOTO", "VIDEO", "TEXT"].includes(slide.type)) {
         return NextResponse.json(
           { success: false, error: "Type de slide invalide" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
       if (slide.type === "TEXT" && !slide.textContent) {
         return NextResponse.json(
           { success: false, error: "Texte requis pour slide TEXT" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       ) {
         return NextResponse.json(
           { success: false, error: "URL média requise pour PHOTO/VIDEO" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     console.error("❌ Error creating story:", error);
     return NextResponse.json(
       { success: false, error: "Erreur lors de la création de la story" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -163,10 +163,15 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    // 3. Séparer les stories vues et non vues
-    const viewed = stories.filter((s) => s.views.length > 0 && s.userId !== auth.user!.id);
-    const unviewed = stories.filter((s) => s.views.length === 0 && s.userId !== auth.user!.id);
+    // 3. ✅ CORRECTION : inclure la propre story de l'utilisateur dans toutes les catégories
+    //    - userStory  : la story de l'utilisateur courant (toujours en premier)
+    //    - unviewed   : stories non vues DES AUTRES utilisateurs
+    //    - viewed     : stories vues DES AUTRES utilisateurs
     const userStory = stories.find((s) => s.userId === auth.user!.id);
+    const otherStories = stories.filter((s) => s.userId !== auth.user!.id);
+
+    const viewed = otherStories.filter((s) => s.views.length > 0);
+    const unviewed = otherStories.filter((s) => s.views.length === 0);
 
     // 4. Mélanger aléatoirement les non vues
     const shuffledUnviewed = unviewed.sort(() => Math.random() - 0.5);
@@ -178,7 +183,9 @@ export async function GET(request: NextRequest) {
       ...viewed,
     ].map((story) => ({
       ...story,
-      hasViewed: story.views.length > 0,
+      // ✅ hasViewed : pour sa propre story, on considère toujours comme "vu"
+      //    Pour les autres, on vérifie les views
+      hasViewed: story.userId === auth.user!.id ? true : story.views.length > 0,
       isOwn: story.userId === auth.user!.id,
     }));
 
@@ -190,7 +197,7 @@ export async function GET(request: NextRequest) {
     console.error("❌ Error fetching stories:", error);
     return NextResponse.json(
       { success: false, error: "Erreur lors de la récupération des stories" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
