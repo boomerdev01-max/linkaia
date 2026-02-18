@@ -182,7 +182,7 @@ export default function RoleManagementClient() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 font-medium">
-                  Total Utilisateurs
+                  Total utilisateurs
                 </p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {roles.reduce((sum, r) => sum + r.userCount, 0)}
