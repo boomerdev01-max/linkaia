@@ -717,7 +717,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Notifications & E-mails" },
+    where: { name: "Notifications et emails" },
     update: {
       path: "/admin/communication/notifications",
       icon: "Mail",
@@ -725,7 +725,7 @@ async function seedRBAC() {
       order: 1,
     },
     create: {
-      name: "Notifications & E-mails",
+      name: "Notifications et emails",
       path: "/admin/communication/notifications",
       icon: "Mail",
       parentId: menuComm.id,
@@ -932,7 +932,7 @@ async function seedRBAC() {
     "Statistiques & Rapports": ["reports.view"],
     "Revenus & Statistiques": ["reports.view", "reports.export"],
     Communication: ["notification.send", "email.send"],
-    "Notifications & E-mails": ["notification.send", "email.send"],
+    "Notifications et emails": ["notification.send", "email.send"],
     "Configuration système": ["system.config"],
     Administration: ["system.config", "system.logs"],
     Finances: ["invoice.read"],
