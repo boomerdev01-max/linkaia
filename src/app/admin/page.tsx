@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
 import { userHasPermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { Users, Image, CreditCard, Wallet } from "lucide-react";
 
@@ -64,18 +65,20 @@ export default async function AdminDashboard() {
 
   const stats = [
     {
-      label: "Total Utilisateurs",
+      label: "Total utilisateurs",
       value: totalUsers.toString(),
       icon: Users,
       color: "bg-blue-100",
       textColor: "text-blue-600",
+      href: "/admin/users/profiles", // Redirection vers la page des profils utilisateurs
     },
     {
-      label: "Posts Publiés",
+      label: "Posts publiés",
       value: totalPosts.toString(),
       icon: Image,
       color: "bg-green-100",
       textColor: "text-green-600",
+      href: "/admin", // Même page (dashboard admin)
     },
     {
       label: "Transactions",
@@ -83,6 +86,7 @@ export default async function AdminDashboard() {
       icon: CreditCard,
       color: "bg-purple-100",
       textColor: "text-purple-600",
+      href: "/admin", // Même page (dashboard admin)
     },
     {
       label: "Revenus",
@@ -90,6 +94,7 @@ export default async function AdminDashboard() {
       icon: Wallet,
       color: "bg-orange-100",
       textColor: "text-orange-600",
+      href: "/admin", // Même page (dashboard admin)
     },
   ];
 
@@ -109,24 +114,27 @@ export default async function AdminDashboard() {
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <div
+              <Link
                 key={stat.label}
-                className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                href={stat.href}
+                className="block focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-xl"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div
-                    className={`h-12 w-12 rounded-lg ${stat.color} flex items-center justify-center`}
-                  >
-                    <Icon className={`h-6 w-6 ${stat.textColor}`} />
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all hover:border-gray-300 cursor-pointer">
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className={`h-12 w-12 rounded-lg ${stat.color} flex items-center justify-center`}
+                    >
+                      <Icon className={`h-6 w-6 ${stat.textColor}`} />
+                    </div>
                   </div>
+                  <h3 className="text-gray-600 text-sm font-medium">
+                    {stat.label}
+                  </h3>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                    {stat.value}
+                  </p>
                 </div>
-                <h3 className="text-gray-600 text-sm font-medium">
-                  {stat.label}
-                </h3>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {stat.value}
-                </p>
-              </div>
+              </Link>
             );
           })}
         </div>
