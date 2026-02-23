@@ -7,7 +7,7 @@ import RoleManagementClient from "@/components/admin/roles/RoleManagementClient"
 
 export const metadata = {
   title: "Gestion des Rôles - Administration",
-  description: "Créer, modifier et gérer les rôles utilisateurs",
+  description: "",
 };
 
 export default async function RoleManagementPage() {
@@ -45,7 +45,7 @@ export default async function RoleManagementPage() {
     <div>
       <AdminHeader
         title="Gestion des Rôles"
-        description="Créer, modifier et gérer les rôles utilisateurs"
+        description=""
         userName={`${user.prenom} ${user.nom}`}
         userEmail={user.email}
         userImage={user.profil?.profilePhotoUrl ?? null}
