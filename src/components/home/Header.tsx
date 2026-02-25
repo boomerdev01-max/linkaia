@@ -45,7 +45,7 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
   const navItems = [
     { icon: Home, label: "Accueil", path: "/home" },
     { icon: Sparkles, label: "Decouvrir", path: "/discover" },
-    { icon: Users, label: "Rencontres", path: "/rencontres" },
+    { icon: Users, label: "Rencontres", path: "/suggestions" },
     { icon: PlayCircle, label: "Videos", path: "/videos" },
     { icon: Calendar, label: "Evenements", path: "/events" },
   ];
