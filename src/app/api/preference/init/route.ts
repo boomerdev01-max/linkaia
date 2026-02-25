@@ -1,5 +1,3 @@
-// src/app/api/preference/init/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
@@ -27,18 +25,31 @@ export async function POST(request: NextRequest) {
 
     const userId = user.id;
 
-    // 3️⃣ Vérifier si une préférence existe déjà (juste pour le flag isNew)
-    const existingPreference = await prisma.preference.findUnique({
+    // 3️⃣ NETTOYAGE : Supprimer les doublons s'ils existent
+    // On garde uniquement la première préférence (la plus ancienne)
+    const duplicatePreferences = await prisma.preference.findMany({
       where: { userId },
-      select: { id: true },
+      orderBy: { createdAt: "asc" },
     });
 
-    // 4️⃣ Upsert idempotent :
-    //    - si aucune préférence n'existe → create
-    //    - si elle existe déjà → update (ici vide, juste pour récupérer les relations)
+    if (duplicatePreferences.length > 1) {
+      console.log(
+        `🧹 Nettoyage : ${duplicatePreferences.length - 1} préférences en double pour l'utilisateur ${userId}`,
+      );
+
+      // Garder la première, supprimer les autres
+      const [first, ...rest] = duplicatePreferences;
+      await prisma.preference.deleteMany({
+        where: {
+          id: { in: rest.map((p) => p.id) },
+        },
+      });
+    }
+
+    // 4️⃣ Maintenant on peut faire l'upsert en toute sécurité
     const preference = await prisma.preference.upsert({
       where: { userId },
-      update: {}, // rien à mettre pour l'init, on ne fait que garantir l'existence
+      update: {}, // rien à mettre pour l'init
       create: {
         userId,
       },
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         preference,
-        isNew: !existingPreference, // true si on vient de la créer
+        isNew: duplicatePreferences.length === 0, // true si on vient de la créer
       },
       { status: 200 },
     );

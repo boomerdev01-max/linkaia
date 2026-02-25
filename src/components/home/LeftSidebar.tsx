@@ -39,7 +39,7 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
 
   const menuItems = [
     { icon: Home, label: "Accueil", path: "/home", active: true },
-    { icon: Users, label: "Rencontres", path: "/matches" },
+    { icon: Users, label: "Rencontres", path: "/suggestions" },
     { icon: Heart, label: "Favoris", path: "/favorites" },
     { icon: PlayCircle, label: "Vidéos", path: "/videos" },
     { icon: Calendar, label: "Événements", path: "/events" },
@@ -105,9 +105,7 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
             <button
               key={index}
               onClick={() => {
-                if (item.active) return;
-                toast.info("Fonctionnalité à venir");
-                // router.push(item.path);
+                router.push(item.path);
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 item.active

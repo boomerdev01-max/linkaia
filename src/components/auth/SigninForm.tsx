@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -35,6 +35,16 @@ export default function SigninPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+
+  // Auto-rotate testimonials - Corrigé avec useEffect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+
+    // Nettoyage de l'intervalle quand le composant est démonté
+    return () => clearInterval(interval);
+  }, []); // Le tableau de dépendances vide [] assure que l'effet ne s'exécute qu'au montage
 
   const handleGoogleSignin = async () => {
     try {
@@ -101,14 +111,6 @@ export default function SigninPage() {
       setLoading(false);
     }
   };
-
-  // Auto-rotate testimonials
-  useState(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  });
 
   return (
     <div className="flex min-h-screen">
