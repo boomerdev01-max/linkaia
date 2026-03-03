@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 }
 
 // ============================================
-// GET - Lister tous les rôles
+// GET - Lister tous les rôles 
 // ============================================
 export async function GET(request: NextRequest) {
   try {
