@@ -432,7 +432,7 @@ export default function CreateUserClient() {
 
             {fieldErrors.roleId && (
               <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                <AlertCircle className="h-3 w-3 shrink-0" />
                 {fieldErrors.roleId}
               </p>
             )}
@@ -440,7 +440,7 @@ export default function CreateUserClient() {
 
           {/* Note mot de passe */}
           <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
-            <KeyRound className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <KeyRound className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-semibold text-amber-800">Mot de passe automatique</p>
               <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
@@ -453,7 +453,7 @@ export default function CreateUserClient() {
           {/* Erreur globale */}
           {error && (
             <div className="flex gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3.5">
-              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
@@ -469,7 +469,7 @@ export default function CreateUserClient() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0F4C5C] to-[#0a3542] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 text-sm font-semibold text-white bg-linear-to-r from-[#0F4C5C] to-[#0a3542] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
