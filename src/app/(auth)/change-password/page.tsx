@@ -1,14 +1,31 @@
-export default function ChangePasswordPage() {
+// app/(auth)/change-password/page.tsx
+import { Suspense } from "react";
+import ChangePasswordPage from "@/components/auth/ChangePassword";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Vérification de l'email",
+  description: "Vérifiez votre adresse email",
+};
+
+export default function ChangePassword() {
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="max-w-md w-full p-6">
-        <h1 className="text-2xl font-semibold mb-2">
-          Changer le mot de passe
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Cette page sera bientôt disponible.
-        </p>
-      </div>
-    </main>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center px-4">
+          <div className="text-center space-y-6">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground text-lg">
+              Chargement de la vérification...
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Veuillez patienter un instant
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <ChangePasswordPage />
+    </Suspense>
   );
 }
