@@ -92,6 +92,7 @@ model User {
   profil Profil?
   companyProfile CompanyProfile?
   preference Preference?
+  postViews PostView[] @relation("PostViews")
   
   // ✅ POSTS & SOCIAL
   posts             Post[]
@@ -459,10 +460,31 @@ model Post {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  views PostView[]
+
   @@index([authorId])
   @@index([visibility])
   @@index([createdAt])
   @@map("posts")
+}
+
+model PostView {
+  id        String   @id @default(uuid())
+
+  postId    String   @map("post_id")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  viewerId  String   @map("viewer_id")
+  viewer    User     @relation("PostViews", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  // Une seule vue par utilisateur par post (impression unique)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([postId, viewerId])
+  @@index([postId])
+  @@index([viewerId])
+  @@index([createdAt])
+  @@map("post_views")
 }
 
 // ============================================
