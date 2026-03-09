@@ -81,7 +81,7 @@ function getCategoryLabel(category: string): string {
     notification: "Notifications",
     email: "Emails",
     system: "Système",
-    prestige: "Codes Prestige",
+    prestige: "Codes prestige",
     dashboard: "Dashboard",
     reports: "Rapports",
   };

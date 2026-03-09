@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyAdminNewAdminUser } from "@/lib/admin-notification-helpers";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { getUserPrimaryRole, userHasPermission } from "@/lib/rbac";
@@ -230,6 +231,10 @@ export async function POST(request: NextRequest) {
     });
 
     // 📨 Envoi de l'email avec les identifiants
+    // 📢 Notifier les admins d'un nouveau compte staff
+    await notifyAdminNewAdminUser(newUser.id, adminUser.id).catch(
+      console.error,
+    );
     // Le plainPassword n'est jamais retourné à l'admin dans la réponse API
     await sendAdminCreatedUserEmail(
       email.trim().toLowerCase(),
