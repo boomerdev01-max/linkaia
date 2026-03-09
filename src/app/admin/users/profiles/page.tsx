@@ -6,7 +6,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import UserProfilesClient from "@/components/admin/UserProfilesClient";
 
 export const metadata = {
-  title: "Profils Utilisateurs - Linkaïa",
+  title: "Profils utilisateurs - Linkaïa",
   description: "Gestion des profils utilisateurs",
 };
 
@@ -42,7 +42,7 @@ export default async function UserProfilesPage() {
   return (
     <div>
       <AdminHeader
-        title="Profils Utilisateurs"
+        title="Profils utilisateurs"
         description=""
         userName={`${user.prenom} ${user.nom}`}
         userEmail={user.email}

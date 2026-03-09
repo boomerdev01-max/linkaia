@@ -1,5 +1,6 @@
 // app/api/auth/signup/route.ts
 import { NextResponse } from "next/server";
+import { notifyAdminNewUser } from "@/lib/admin-notification-helpers";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -138,6 +139,8 @@ export async function POST(request: Request) {
       });
 
       console.log(`✅ Role standard_user assigned to user: ${user.id}`);
+      // 📢 Notifier les admins d'un nouvel inscrit
+      await notifyAdminNewUser(user.id).catch(console.error);
 
       // 7️⃣ ENVOYER L'EMAIL DE VÉRIFICATION
       await sendVerificationEmail(user.email, verificationCode, user.prenom);

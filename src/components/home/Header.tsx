@@ -47,7 +47,7 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
     { icon: Sparkles, label: "Decouvrir", path: "/discover" },
     { icon: Users, label: "Rencontres", path: "/suggestions" },
     { icon: PlayCircle, label: "Videos", path: "/videos" },
-    { icon: Calendar, label: "Evenements", path: "/events" },
+    { icon: Calendar, label: "Evenements", path: "/my-stas" },
   ];
 
   const handleSearchFocus = () => {

@@ -419,6 +419,10 @@ async function seedRBAC() {
       description: "Consulter les statistiques financières",
     },
     { name: "notification.send", description: "Envoyer des notifications" },
+    {
+      name: "notifications.view",
+      description: "Voir les notifications admin",
+    },
     { name: "email.send", description: "Envoyer des emails" },
     { name: "system.config", description: "Configurer le système" },
     { name: "system.logs", description: "Consulter les logs" },
@@ -553,10 +557,10 @@ async function seedRBAC() {
   });
 
   const menuServices = await prisma.menu.upsert({
-    where: { name: "Services & Paiements" },
+    where: { name: "Paiements" },
     update: { path: null, icon: "CreditCard", order: 3 },
     create: {
-      name: "Services & Paiements",
+      name: "Paiements",
       path: null,
       icon: "CreditCard",
       order: 3,
@@ -564,10 +568,10 @@ async function seedRBAC() {
   });
 
   const menuStats = await prisma.menu.upsert({
-    where: { name: "Statistiques & Rapports" },
+    where: { name: "Statistiques" },
     update: { path: null, icon: "BarChart3", order: 4 },
     create: {
-      name: "Statistiques & Rapports",
+      name: "Statistiques",
       path: null,
       icon: "BarChart3",
       order: 4,
@@ -581,10 +585,10 @@ async function seedRBAC() {
   });
 
   const menuConfig = await prisma.menu.upsert({
-    where: { name: "Configuration système" },
+    where: { name: "Paramètres" },
     update: { path: null, icon: "Settings", order: 6 },
     create: {
-      name: "Configuration système",
+      name: "Paramètres",
       path: null,
       icon: "Settings",
       order: 6,
@@ -598,7 +602,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Profils Utilisateurs" },
+    where: { name: "Profils utilisateurs" },
     update: {
       path: "/admin/users/profiles",
       icon: "UserCheck",
@@ -606,7 +610,7 @@ async function seedRBAC() {
       order: 1,
     },
     create: {
-      name: "Profils Utilisateurs",
+      name: "Profils utilisateurs",
       path: "/admin/users/profiles",
       icon: "UserCheck",
       parentId: menuUsers.id,
@@ -632,7 +636,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Codes Prestige" },
+    where: { name: "Codes prestige" },
     update: {
       path: "/admin/prestige-codes",
       icon: "Crown",
@@ -640,7 +644,7 @@ async function seedRBAC() {
       order: 3,
     },
     create: {
-      name: "Codes Prestige",
+      name: "Codes prestige",
       path: "/admin/prestige-codes",
       icon: "Crown",
       parentId: menuUsers.id,
@@ -649,7 +653,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Médias en Attente" },
+    where: { name: "Médias en attente" },
     update: {
       path: "/admin/content/pending-media",
       icon: "FileImage",
@@ -657,7 +661,7 @@ async function seedRBAC() {
       order: 1,
     },
     create: {
-      name: "Médias en Attente",
+      name: "Médias en attente",
       path: "/admin/content/pending-media",
       icon: "FileImage",
       parentId: menuContent.id,
@@ -683,7 +687,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Statistiques Services" },
+    where: { name: "Statistiques" },
     update: {
       path: "/admin/services/statistics",
       icon: "TrendingUp",
@@ -691,7 +695,7 @@ async function seedRBAC() {
       order: 2,
     },
     create: {
-      name: "Statistiques Services",
+      name: "Statistiques",
       path: "/admin/services/statistics",
       icon: "TrendingUp",
       parentId: menuServices.id,
@@ -700,7 +704,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Revenus & Statistiques" },
+    where: { name: "Revenus" },
     update: {
       path: "/admin/stats/reports",
       icon: "TrendingUp",
@@ -708,7 +712,7 @@ async function seedRBAC() {
       order: 1,
     },
     create: {
-      name: "Revenus & Statistiques",
+      name: "Revenus",
       path: "/admin/stats/reports",
       icon: "TrendingUp",
       parentId: menuStats.id,
@@ -717,7 +721,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Notifications et emails" },
+    where: { name: "Notifications" },
     update: {
       path: "/admin/communication/notifications",
       icon: "Mail",
@@ -725,7 +729,7 @@ async function seedRBAC() {
       order: 1,
     },
     create: {
-      name: "Notifications et emails",
+      name: "Notifications",
       path: "/admin/communication/notifications",
       icon: "Mail",
       parentId: menuComm.id,
@@ -799,6 +803,7 @@ async function seedRBAC() {
     "media.moderate",
     "user.read",
     "user.list",
+    "notifications.view",
   ];
   for (const permKey of moderatorPerms) {
     await prisma.rolePermission.upsert({
@@ -921,19 +926,19 @@ async function seedRBAC() {
   const allMenus = await prisma.menu.findMany();
   const menuPermMap: Record<string, string[]> = {
     Utilisateurs: ["user.read", "user.list"],
-    "Profils Utilisateurs": ["user.read", "user.profile"],
+    "Profils utilisateurs": ["user.read", "user.profile"],
     "Rôles et permissions": ["role.read", "permission.manage"],
-    "Codes Prestige": ["prestige.manage"],
+    "Codes prestige": ["prestige.manage"],
     "Gestion de contenu": ["post.read", "media.moderate"],
-    "Médias en Attente": ["media.moderate"],
-    "Services & Paiements": ["transaction.read"],
+    "Médias en attente": ["media.moderate"],
+    Paiements: ["transaction.read"],
     Transactions: ["transaction.read", "transaction.create"],
-    "Statistiques Services": ["statistics.view"],
-    "Statistiques & Rapports": ["reports.view"],
-    "Revenus & Statistiques": ["reports.view", "reports.export"],
+    Statistiques: ["statistics.view"],
+    Rapports: ["reports.view"],
+    Revenus: ["reports.view", "reports.export"],
     Communication: ["notification.send", "email.send"],
-    "Notifications et emails": ["notification.send", "email.send"],
-    "Configuration système": ["system.config"],
+    Notifications: ["notification.send", "email.send"],
+    Paramètres: ["system.config"],
     Administration: ["system.config", "system.logs"],
     Finances: ["invoice.read"],
     "Demandes & Factures": ["invoice.read", "invoice.create", "invoice.update"],

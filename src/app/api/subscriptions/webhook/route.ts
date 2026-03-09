@@ -1,5 +1,6 @@
 // src/app/api/subscriptions/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { notifyAdminNewSubscription } from "@/lib/admin-notification-helpers";
 import { stripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
@@ -141,6 +142,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // ✨ Créer une notification d'abonnement activé
   await notifySubscriptionActivated(userId, subscriptionType.name);
+
+  // 📢 Notifier les admins d'un nouvel abonnement
+  await notifyAdminNewSubscription({
+    userId,
+    subscriptionName: subscriptionType.name,
+    pricePaid: session.amount_total ? session.amount_total / 100 : 0,
+    currencyCode: (session.currency ?? "xof").toUpperCase(),
+    isClub: false,
+  }).catch(console.error);
 
   console.log(`Subscription created for user ${userId}`);
 }

@@ -1,5 +1,6 @@
 // src/app/api/reports/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { notifyAdminReportSubmitted } from "@/lib/admin-notification-helpers";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-helpers";
 
@@ -60,13 +61,48 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    // ... ta validation + création de report ici ...
+    const { profileId, categoryId, reason } = body as {
+      profileId: string;
+      categoryId: string;
+      reason: string;
+    };
 
-    // Exemple placeholder
-    return NextResponse.json({
-      success: true,
-      message: "Signalement créé (route statique)",
+    if (!profileId || !categoryId || !reason?.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Champs manquants" },
+        { status: 400 },
+      );
+    }
+
+    if (reason.trim().length < 20) {
+      return NextResponse.json(
+        { success: false, error: "Raison trop courte (min 20 caractères)" },
+        { status: 400 },
+      );
+    }
+
+    // Empêcher l'auto-signalement
+    if (profileId === auth.user.id) {
+      return NextResponse.json(
+        { success: false, error: "Vous ne pouvez pas vous signaler vous-même" },
+        { status: 400 },
+      );
+    }
+
+    const report = await prisma.report.create({
+      data: {
+        reporterId: auth.user.id,
+        reportedUserId: profileId,
+        categoryId,
+        reason: reason.trim(),
+        status: "pending",
+      },
     });
+
+    // 📢 Notifier les admins/modérateurs
+    await notifyAdminReportSubmitted(report.id).catch(console.error);
+
+    return NextResponse.json({ success: true, report });
   } catch (error) {
     console.error("❌ POST /api/reports error:", error);
     return NextResponse.json(
