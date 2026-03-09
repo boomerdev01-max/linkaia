@@ -192,7 +192,7 @@ export default function UserProfilesClient() {
               <span
                 className="
                   absolute inset-0 -translate-x-full
-                  bg-gradient-to-r from-transparent via-white/15 to-transparent
+                  bg-linear-to-r from-transparent via-white/15 to-transparent
                   group-hover:translate-x-full
                   transition-transform duration-700 ease-in-out
                 "
