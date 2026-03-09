@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Filter,
@@ -15,6 +16,7 @@ import {
   XCircle,
   Building2,
   User,
+  UserPlus,
 } from "lucide-react";
 
 interface User {
@@ -40,6 +42,7 @@ interface PaginationData {
 }
 
 export default function UserProfilesClient() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
@@ -150,8 +153,8 @@ export default function UserProfilesClient() {
       {/* 🔍 Search & Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search Bar */}
-          <div className="flex-1 relative">
+          {/* Search Bar — slightly reduced width */}
+          <div className="flex-1 max-w-md relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
@@ -162,14 +165,42 @@ export default function UserProfilesClient() {
             />
           </div>
 
-          {/* Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Filter className="h-5 w-5" />
-            Filtres
-          </button>
+          {/* Right side: Filter toggle + Add button */}
+          <div className="flex items-center gap-3 ml-auto">
+            {/* Filter Toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Filter className="h-5 w-5" />
+              Filtres
+            </button>
+
+            {/* ✨ Add User Button */}
+            <button
+              onClick={() => router.push("/admin/users/create")}
+              className="
+                group relative flex items-center gap-2 px-5 py-2
+                bg-[#0F4C5C] text-white font-medium text-sm rounded-lg
+                overflow-hidden
+                shadow-md hover:shadow-lg
+                transition-all duration-300 ease-out
+                hover:bg-[#0d3f4d] active:scale-[0.97]
+              "
+            >
+              {/* Animated shimmer effect */}
+              <span
+                className="
+                  absolute inset-0 -translate-x-full
+                  bg-gradient-to-r from-transparent via-white/15 to-transparent
+                  group-hover:translate-x-full
+                  transition-transform duration-700 ease-in-out
+                "
+              />
+              <UserPlus className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+              <span>Ajouter</span>
+            </button>
+          </div>
         </div>
 
         {/* Filters Panel */}
@@ -392,7 +423,7 @@ export default function UserProfilesClient() {
                 <span className="font-medium">
                   {Math.min(
                     pagination.page * pagination.limit,
-                    pagination.total
+                    pagination.total,
                   )}
                 </span>{" "}
                 sur <span className="font-medium">{pagination.total}</span>{" "}
@@ -411,7 +442,6 @@ export default function UserProfilesClient() {
                 <div className="flex items-center gap-1">
                   {Array.from({ length: pagination.totalPages }, (_, i) => {
                     const pageNum = i + 1;
-                    // Show only nearby pages
                     if (
                       pageNum === 1 ||
                       pageNum === pagination.totalPages ||
