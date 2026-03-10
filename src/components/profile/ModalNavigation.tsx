@@ -18,23 +18,27 @@ export default function ModalNavigation({
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   return (
-    <div className="border-t border-gray-100 bg-white px-6 py-5 shadow-lg shrink-0">
-      <div className="flex items-center justify-between gap-4">
+    <div className="border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-6 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] shrink-0 rounded-b-3xl relative z-20">
+      <div className="flex items-center justify-between gap-6 max-w-sm mx-auto">
         {currentStep > 0 ? (
           <button
             onClick={onPrevious}
-            className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0"
+            className="w-14 h-14 rounded-full bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95 shrink-0"
+            aria-label="Étape précédente"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-700" />
+            <ChevronLeft className="w-7 h-7 text-gray-700 dark:text-gray-300" strokeWidth={2.5} />
           </button>
         ) : (
-          <div className="w-12 h-12 shrink-0" />
+          <div className="w-14 h-14 shrink-0" />
         )}
 
-        <div className="flex-1">
-          <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+        <div className="flex-1 flex flex-col gap-2">
+          <div className="flex justify-between items-center px-1">
+             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{currentStep + 1} / {totalSteps}</span>
+          </div>
+          <div className="h-2.5 bg-gray-100 dark:bg-zinc-900 rounded-full overflow-hidden w-full shadow-inner">
             <div
-              className="h-full bg-linear-to-r from-primary to-accent rounded-full transition-all duration-500 ease-out"
+              className="h-full bg-gradient-to-r from-pink-500 to-orange-400 rounded-full transition-all duration-700 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -43,16 +47,18 @@ export default function ModalNavigation({
         {hasSelection ? (
           <button
             onClick={onNext}
-            className="w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all shrink-0 shadow-lg"
+            className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 flex items-center justify-center transition-all active:scale-95 shrink-0 shadow-lg shadow-pink-500/30"
+            aria-label="Étape suivante (Valider)"
           >
-            <Check className="w-6 h-6 text-white" strokeWidth={3} />
+            <Check className="w-7 h-7 text-white" strokeWidth={3.5} />
           </button>
         ) : (
           <button
             onClick={onNext}
-            className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0"
+            className="w-14 h-14 rounded-full bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95 shrink-0 group"
+            aria-label="Passer / Étape suivante"
           >
-            <ChevronRight className="w-6 h-6 text-gray-700" />
+            <ChevronRight className="w-7 h-7 text-gray-400 group-hover:text-gray-700 dark:text-gray-600 dark:group-hover:text-gray-300" strokeWidth={2.5} />
           </button>
         )}
       </div>
