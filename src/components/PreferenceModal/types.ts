@@ -61,7 +61,7 @@ export interface ReferenceData {
   personalityTypes: PersonalityType[];
   educationLevels: EducationLevel[];
   interestCategories: InterestCategory[];
-  cities: City[];
+  //cities: City[];
   nationalities: Nationality[];
 }
 

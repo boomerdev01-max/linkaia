@@ -524,7 +524,6 @@ export default function PreferenceModal() {
                 }
                 selectedCityIds={formData.selectedCityIds}
                 nationalities={referenceData.nationalities}
-                cities={referenceData.cities}
                 onResidenceCountryCodesChange={(codes: any) =>
                   setFormData((p) => ({
                     ...p,
