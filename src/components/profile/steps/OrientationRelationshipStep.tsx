@@ -1,4 +1,5 @@
 import { Option } from "@/components/ModalSteps/types";
+import { Check } from "lucide-react";
 
 interface OrientationRelationshipStepProps {
   sexualOrientation: string;
@@ -8,11 +9,15 @@ interface OrientationRelationshipStepProps {
 }
 
 const orientationOptions: Option[] = [
-  { id: "hetero", label: "Hétérosexuel(le)" },
-  { id: "homo", label: "Homosexuel(le)" },
+  { id: "hetero", label: "Hétéro" },
+  { id: "gay", label: "Gay" },
+  { id: "lesbian", label: "Lesbienne" },
   { id: "bi", label: "Bisexuel(le)" },
-  { id: "pan", label: "Pansexuel(le)" },
   { id: "asexual", label: "Asexuel(le)" },
+  { id: "demi", label: "Demisexuel(le)" },
+  { id: "pan", label: "Pansexuel(le)" },
+  { id: "queer", label: "Queer" },
+  { id: "questioning", label: "Je me cherche" },
   { id: "PREFER_NOT_TO_SAY", label: "Je préfère ne pas le dire" },
 ];
 
@@ -21,7 +26,6 @@ const relationshipOptions: Option[] = [
   { id: "couple", label: "En couple" },
   { id: "complicated", label: "C'est compliqué" },
   { id: "open", label: "En relation libre" },
-  { id: "married", label: "Marié(e)" },
   { id: "PREFER_NOT_TO_SAY", label: "Je préfère ne pas le dire" },
 ];
 
@@ -32,159 +36,124 @@ export default function OrientationRelationshipStep({
   onRelationshipChange,
 }: OrientationRelationshipStepProps) {
   return (
-    <>
-      {/* Hero Image - Orientation & Relationship */}
-      <div className="relative h-85.75 w-full bg-linear-to-br from-secondary via-accent/60 to-primary overflow-hidden shrink-0">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-full h-full flex items-center justify-center p-8">
-            {/* Illustration abstraite style Badoo */}
-            <div className="relative w-full h-full max-w-md">
-              {/* Forme 1 - Visage gauche */}
-              <div className="absolute left-0 top-1/4 w-48 h-48 bg-linear-to-br from-secondary to-secondary/80 rounded-tl-[80px] rounded-tr-4xl rounded-bl-[40px] rounded-br-[100px] transform -rotate-6">
-                {/* Col rouge */}
-                <div
-                  className="absolute -bottom-8 left-8 w-24 h-20 bg-accent rounded-[40px] border-4 border-white"
-                  style={{ clipPath: "ellipse(50% 40% at 50% 50%)" }}
-                />
-              </div>
-
-              {/* Forme 2 - Visage droit */}
-              <div className="absolute right-8 top-1/4 w-56 h-48 bg-linear-to-br from-primary to-primary-dark rounded-[30px] transform rotate-3">
-                {/* Yeux */}
-                <div className="absolute top-12 left-8 w-16 h-12 bg-white rounded-full flex items-center justify-center">
-                  <div className="w-8 h-10 bg-black rounded-full" />
-                </div>
-                <div className="absolute top-12 right-8 w-16 h-12 bg-white rounded-full flex items-center justify-center">
-                  <div className="w-8 h-10 bg-black rounded-full" />
-                </div>
-              </div>
-
-              {/* Coeur au centre */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-7xl animate-pulse">
-                ❤️
-              </div>
-
-              {/* Formes décoratives */}
-              <div className="absolute top-8 left-1/3 w-32 h-24 bg-primary/60 rounded-4xl transform -rotate-12" />
-              <div className="absolute bottom-16 right-4 flex flex-col gap-2">
-                <div className="w-1 h-8 bg-primary-dark transform rotate-12" />
-                <div className="w-1 h-8 bg-primary-dark transform rotate-12" />
-                <div className="w-1 h-8 bg-primary-dark transform rotate-12" />
-              </div>
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-950 font-sans selection:bg-pink-500/30">
+      
+      {/* Decorative Header */}
+      <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-3xl">
+         {/* Minimal abstract Badoo/Bumble style header */}
+         <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-purple-500/5 to-orange-500/10" />
+         <div className="absolute top-[-50%] right-[-20%] w-64 h-64 bg-pink-500/20 rounded-full blur-3xl" />
+         <div className="absolute bottom-[-30%] left-[-10%] w-48 h-48 bg-orange-500/20 rounded-full blur-3xl" />
+         
+         <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative w-24 h-24 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md rounded-[2rem] border border-white/60 dark:border-zinc-800/60 shadow-xl flex items-center justify-center transform rotate-3">
+               <span className="text-4xl">🏳️‍🌈</span>
+               <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white dark:bg-zinc-800 rounded-full shadow-lg flex items-center justify-center border border-gray-100 dark:border-zinc-700">
+                  <span className="text-xl">❤️</span>
+               </div>
             </div>
-          </div>
-        </div>
+         </div>
       </div>
 
       {/* Form Content */}
-      <div className="px-8 pt-5.5 pb-10">
+      <div className="px-6 sm:px-10 pt-8 pb-32 overflow-y-auto scrollbar-hide space-y-12">
+        
         {/* Orientation sexuelle */}
-        <div className="mb-8">
-          <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-6">
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
             Quelle est votre orientation sexuelle ?
           </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Sélectionnez ce qui vous correspond le mieux.</p>
 
-          <div className="space-y-3">
-            {orientationOptions.map((option) => (
-              <div
-                key={option.id}
-                className={`flex items-center justify-between px-6 py-3.25 h-12.5 rounded-full cursor-pointer transition-all duration-200 border-2 ${
-                  sexualOrientation === option.id
-                    ? "bg-primary/10 border-primary"
-                    : "bg-gray-50 border-transparent hover:bg-gray-100"
-                }`}
-                onClick={() => onOrientationChange(option.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    onOrientationChange(option.id);
-                  }
-                }}
-              >
-                <span className="text-lg font-medium text-gray-800">
-                  {option.label}
-                </span>
-                <input
-                  type="radio"
-                  name="orientation"
-                  value={option.id}
-                  checked={sexualOrientation === option.id}
-                  onChange={(e) => onOrientationChange(e.target.value)}
-                  className="sr-only"
-                  tabIndex={-1}
-                />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {orientationOptions.map((option) => {
+              const isActive = sexualOrientation === option.id;
+              
+              return (
                 <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    sexualOrientation === option.id
-                      ? "border-primary bg-primary"
-                      : "border-gray-400"
+                  key={option.id}
+                  className={`group relative flex items-center justify-between px-5 py-4 rounded-2xl cursor-pointer transition-all duration-300 border-2 select-none ${
+                    isActive
+                      ? "bg-pink-50 dark:bg-pink-500/10 border-pink-500 dark:border-pink-500 shadow-sm shadow-pink-500/10"
+                      : "bg-white dark:bg-zinc-950 border-gray-100 dark:border-zinc-800 hover:border-pink-200 dark:hover:border-pink-900/50 hover:bg-gray-50 dark:hover:bg-zinc-900"
                   }`}
+                  onClick={() => onOrientationChange(option.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOrientationChange(option.id);
+                    }
+                  }}
                 >
-                  {sexualOrientation === option.id && (
-                    <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                  )}
+                  <span className={`text-[15px] font-semibold transition-colors ${isActive ? "text-pink-600 dark:text-pink-400" : "text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white"}`}>
+                    {option.label}
+                  </span>
+                  
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isActive 
+                      ? "bg-pink-500 scale-110" 
+                      : "bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 group-hover:border-pink-300 dark:group-hover:border-pink-800"
+                  }`}>
+                    {isActive && <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
+        </section>
+
+        {/* Divider */}
+        <hr className="border-gray-100 dark:border-zinc-800" />
 
         {/* Situation amoureuse */}
-        <div>
-          <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-6">
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
             Quelle est votre situation amoureuse ?
           </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Pour des rencontres plus transparentes.</p>
 
-          <div className="space-y-3">
-            {relationshipOptions.map((option) => (
-              <div
-                key={option.id}
-                className={`flex items-center justify-between px-6 py-3.25 h-12.5 rounded-full cursor-pointer transition-all duration-200 border-2 ${
-                  relationshipStatus === option.id
-                    ? "bg-primary/10 border-primary"
-                    : "bg-gray-50 border-transparent hover:bg-gray-100"
-                }`}
-                onClick={() => onRelationshipChange(option.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    onRelationshipChange(option.id);
-                  }
-                }}
-              >
-                <span className="text-lg font-medium text-gray-800">
-                  {option.label}
-                </span>
-                <input
-                  type="radio"
-                  name="relationship"
-                  value={option.id}
-                  checked={relationshipStatus === option.id}
-                  onChange={(e) => onRelationshipChange(e.target.value)}
-                  className="sr-only"
-                  tabIndex={-1}
-                />
+          <div className="grid grid-cols-1 gap-3">
+            {relationshipOptions.map((option) => {
+              const isActive = relationshipStatus === option.id;
+
+              return (
                 <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                    relationshipStatus === option.id
-                      ? "border-primary bg-primary"
-                      : "border-gray-400"
+                  key={option.id}
+                  className={`group relative flex items-center justify-between px-5 py-4 rounded-2xl cursor-pointer transition-all duration-300 border-2 select-none ${
+                    isActive
+                      ? "bg-pink-50 dark:bg-pink-500/10 border-pink-500 dark:border-pink-500 shadow-sm shadow-pink-500/10"
+                      : "bg-white dark:bg-zinc-950 border-gray-100 dark:border-zinc-800 hover:border-pink-200 dark:hover:border-pink-900/50 hover:bg-gray-50 dark:hover:bg-zinc-900"
                   }`}
+                  onClick={() => onRelationshipChange(option.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRelationshipChange(option.id);
+                    }
+                  }}
                 >
-                  {relationshipStatus === option.id && (
-                    <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                  )}
+                  <span className={`text-[15px] font-semibold transition-colors ${isActive ? "text-pink-600 dark:text-pink-400" : "text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white"}`}>
+                    {option.label}
+                  </span>
+                  
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isActive 
+                      ? "bg-pink-500 scale-110" 
+                      : "bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 group-hover:border-pink-300 dark:group-hover:border-pink-800"
+                  }`}>
+                    {isActive && <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
+        </section>
 
-        {/* Spacer */}
-        <div className="h-24" />
       </div>
-    </>
+    </div>
   );
 }
