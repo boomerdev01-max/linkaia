@@ -85,7 +85,6 @@ export default function ProfileModal() {
   // Reference data
   const [referenceData, setReferenceData] = useState<ReferenceData>({
     interestCategories: [],
-    cities: [],
     nationalities: [],
   });
 
@@ -504,7 +503,6 @@ export default function ProfileModal() {
               <ResidenceStep
                 countryResidenceCode={formData.countryResidenceCode}
                 cityId={formData.cityId}
-                cities={referenceData.cities}
                 nationalities={referenceData.nationalities}
                 onCountryChange={(code) =>
                   setFormData((p: any) => ({ ...p, countryResidenceCode: code }))

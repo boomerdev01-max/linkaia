@@ -88,7 +88,7 @@ export default async function AdminConfigPage() {
     <div>
       <AdminHeader
         title="Paramètres"
-        description="Configuration générale du panel administrateur"
+        description=""
         userName={`${user.prenom} ${user.nom}`}
         userEmail={user.email}
         userImage={user.profil?.profilePhotoUrl ?? null}

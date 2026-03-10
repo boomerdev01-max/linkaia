@@ -1,14 +1,27 @@
-// src/components/profile/steps/ResidenceStep.tsx
-// ✨ OPTIMISÉ avec country-state-city
+// src/components/ModalSteps/steps/ResidenceStep.tsx
+"use client";
 
-import { useState, useMemo } from "react";
-import { Search, MapPin, Globe } from "lucide-react";
-import { City, Nationality } from "@/components/ModalSteps/types";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+interface City {
+  id: string;
+  name: string;
+  stateName: string | null;
+  countryCode: string;
+  countryName: string;
+  displayName: string;
+}
+
+interface Nationality {
+  id: string;
+  code: string;
+  nameFr: string;
+  flag: string;
+}
 
 interface ResidenceStepProps {
   countryResidenceCode: string | null;
   cityId: string | null;
-  cities: City[];
   nationalities: Nationality[];
   onCountryChange: (code: string | null) => void;
   onCityChange: (cityId: string | null) => void;
@@ -17,179 +30,142 @@ interface ResidenceStepProps {
 export default function ResidenceStep({
   countryResidenceCode,
   cityId,
-  cities,
   nationalities,
   onCountryChange,
   onCityChange,
 }: ResidenceStepProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [citySearch, setCitySearch] = useState("");
+  const [citySuggestions, setCitySuggestions] = useState<City[]>([]);
+  const [selectedCityLabel, setSelectedCityLabel] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✨ Filtrer les villes par pays sélectionné
-  const filteredCities = useMemo(() => {
-    let result = cities;
+  // ✅ Charger le label de la ville déjà sélectionnée (au chargement)
+  useEffect(() => {
+    if (!cityId) return;
+    fetch(`/api/cities?id=${cityId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.cities?.[0]) {
+          setSelectedCityLabel(data.cities[0].displayName);
+          setCitySearch(data.cities[0].displayName);
+        }
+      })
+      .catch(() => {});
+  }, [cityId]);
 
-    // Filtre par pays si sélectionné
-    if (countryResidenceCode) {
-      result = result.filter((city) => city.countryCode === countryResidenceCode);
-    }
+  // ✅ Recherche avec debounce — déclenché uniquement si l'user tape
+  const handleCitySearchChange = useCallback(
+    (value: string) => {
+      setCitySearch(value);
 
-    // Filtre par recherche
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      result = result.filter(
-        (city) =>
-          city.name.toLowerCase().includes(search) ||
-          city.stateName.toLowerCase().includes(search) ||
-          city.displayName.toLowerCase().includes(search)
-      );
-    }
-
-    return result;
-  }, [cities, countryResidenceCode, searchTerm]);
-
-  // ✨ Grouper les villes par état (pour l'affichage organisé)
-  const citiesByState = useMemo(() => {
-    const grouped: Record<string, City[]> = {};
-
-    filteredCities.forEach((city) => {
-      const key = `${city.stateName}, ${city.countryName}`;
-      if (!grouped[key]) {
-        grouped[key] = [];
+      // Si l'user efface, reset la sélection
+      if (!value) {
+        onCityChange(null);
+        setCitySuggestions([]);
+        setSelectedCityLabel("");
+        return;
       }
-      grouped[key].push(city);
-    });
 
-    return grouped;
-  }, [filteredCities]);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
 
-  // ✨ Ville sélectionnée
-  const selectedCity = useMemo(() => {
-    return cities.find((c) => c.id === cityId);
-  }, [cities, cityId]);
+      debounceRef.current = setTimeout(async () => {
+        if (value.length < 2) return;
+        setIsSearching(true);
+        try {
+          const params = new URLSearchParams({ search: value });
+          if (countryResidenceCode)
+            params.append("country", countryResidenceCode);
+          const res = await fetch(`/api/cities?${params}`);
+          const data = await res.json();
+          setCitySuggestions(data.cities ?? []);
+        } catch {
+          setCitySuggestions([]);
+        } finally {
+          setIsSearching(false);
+        }
+      }, 400);
+    },
+    [countryResidenceCode, onCityChange],
+  );
+
+  const handleSelectCity = (city: City) => {
+    onCityChange(city.id);
+    setCitySearch(city.displayName);
+    setSelectedCityLabel(city.displayName);
+    setCitySuggestions([]);
+  };
 
   return (
-    <>
-      {/* Hero Image */}
-      <div className="relative h-85.75 w-full bg-linear-to-br from-accent via-secondary/50 to-primary overflow-hidden shrink-0">
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          <div className="relative w-full h-full max-w-md">
-            <div className="text-8xl absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-bounce">
-              📍
-            </div>
-          </div>
-        </div>
+    <div className="flex flex-col gap-6 p-6">
+      <h2 className="text-2xl font-bold text-gray-900">Lieu de résidence</h2>
+
+      {/* Sélection du pays */}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-gray-700">Pays</label>
+        <select
+          value={countryResidenceCode ?? ""}
+          onChange={(e) => {
+            onCountryChange(e.target.value || null);
+            // Reset ville si on change de pays
+            onCityChange(null);
+            setCitySearch("");
+            setSelectedCityLabel("");
+            setCitySuggestions([]);
+          }}
+          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="">Sélectionner un pays</option>
+          {nationalities.map((n) => (
+            <option key={n.code} value={n.code}>
+              {n.flag} {n.nameFr}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Form Content */}
-      <div className="px-8 pt-5.5 pb-10">
-        <h2 className="text-[19px] leading-tight font-bold text-primary-dark mb-2">
-          Où habitez-vous ?
-        </h2>
-        <p className="text-sm text-gray-600 mb-6">
-          {selectedCity
-            ? selectedCity.displayName
-            : "Sélectionnez votre pays puis votre ville"}
-        </p>
-
-        {/* ✨ Sélection du Pays */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            <Globe className="inline w-4 h-4 mr-2" />
-            Pays de résidence
-          </label>
-          <select
-            value={countryResidenceCode || ""}
-            onChange={(e) => {
-              onCountryChange(e.target.value || null);
-              onCityChange(null); // Reset ville quand le pays change
-            }}
-            className="w-full px-4 py-3 rounded-full border border-gray-300 focus:border-primary focus:outline-none"
-          >
-            <option value="">Sélectionnez un pays</option>
-            {nationalities.map((nat) => (
-              <option key={nat.code} value={nat.code}>
-                {nat.flag} {nat.nameFr}
-              </option>
-            ))}
-          </select>
+      {/* Recherche de ville — autocomplete */}
+      <div className="flex flex-col gap-2 relative">
+        <label className="text-sm font-medium text-gray-700">Ville</label>
+        <div className="relative">
+          <input
+            type="text"
+            value={citySearch}
+            onChange={(e) => handleCitySearchChange(e.target.value)}
+            placeholder="Rechercher une ville..."
+            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
 
-        {/* ✨ Recherche de Ville (seulement si un pays est sélectionné) */}
-        {countryResidenceCode && (
-          <>
-            <div className="relative mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                <MapPin className="inline w-4 h-4 mr-2" />
-                Ville
-              </label>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher une ville..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 focus:border-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* ✨ Liste des Villes par État */}
-            <div className="space-y-6 max-h-96 overflow-y-auto">
-              {Object.entries(citiesByState).length === 0 ? (
-                <p className="text-center text-gray-500 py-4">
-                  Aucune ville trouvée
-                </p>
-              ) : (
-                Object.entries(citiesByState).map(([stateName, stateCities]) => (
-                  <div key={stateName}>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      {stateName}
-                    </h3>
-                    <div className="space-y-2">
-                      {stateCities.map((city) => {
-                        const isSelected = cityId === city.id;
-
-                        return (
-                          <div
-                            key={city.id}
-                            onClick={() => onCityChange(city.id)}
-                            className={`flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-all border-2 ${
-                              isSelected
-                                ? "bg-primary/10 border-primary"
-                                : "bg-gray-50 border-transparent hover:bg-gray-100"
-                            }`}
-                          >
-                            <div>
-                              <span className="text-sm font-medium text-gray-800">
-                                {city.name}
-                              </span>
-                              {city.latitude && city.longitude && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  📍 {city.latitude.toFixed(2)}°, {city.longitude.toFixed(2)}°
-                                </p>
-                              )}
-                            </div>
-                            {isSelected && (
-                              <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                                <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </>
+        {/* Suggestions dropdown */}
+        {citySuggestions.length > 0 && (
+          <ul className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto mt-1">
+            {citySuggestions.map((city) => (
+              <li
+                key={city.id}
+                onClick={() => handleSelectCity(city)}
+                className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+              >
+                <span className="font-medium">{city.name}</span>
+                {city.stateName && (
+                  <span className="text-gray-500 ml-1">— {city.stateName}</span>
+                )}
+                <span className="text-gray-400 ml-1">({city.countryName})</span>
+              </li>
+            ))}
+          </ul>
         )}
 
-        {/* Espace en bas */}
-        <div className="h-24" />
+        {/* Ville sélectionnée */}
+        {selectedCityLabel && citySuggestions.length === 0 && (
+          <p className="text-xs text-green-600 mt-1">✓ {selectedCityLabel}</p>
+        )}
       </div>
-    </>
+    </div>
   );
 }

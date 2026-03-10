@@ -106,7 +106,7 @@ export interface ProfileFormData {
 export interface ReferenceData {
   interestCategories: InterestCategory[];
   nationalities: Nationality[];
-  cities: City[];
+  //cities: City[];
 }
 
 // ============================================

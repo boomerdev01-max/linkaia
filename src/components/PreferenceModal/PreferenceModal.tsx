@@ -92,7 +92,6 @@ export default function PreferenceModal() {
     personalityTypes: [],
     educationLevels: [],
     interestCategories: [],
-    cities: [],
     nationalities: [],
   });
 
