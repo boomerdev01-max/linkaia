@@ -1,8 +1,17 @@
-// src/app/api/profile/reference-data/route.ts - VERSION COMPLÈTE MISE À JOUR
+// src/app/api/profile/reference-data/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
+
+// ✅ Cache module-level — persiste entre les invocations chaudes de la fonction
+// Sur Vercel, une même instance peut être réutilisée pendant ~10-15min
+let cache: {
+  data: Record<string, unknown> | null;
+  timestamp: number;
+} = { data: null, timestamp: 0 };
+
+const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +24,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ✅ RÉCUPÉRATION EN PARALLÈLE DE TOUTES LES DONNÉES DE RÉFÉRENCE
+    // ✅ Servir depuis le cache si valide
+    if (cache.data && Date.now() - cache.timestamp < CACHE_TTL) {
+      return NextResponse.json(cache.data, {
+        headers: { "X-Cache": "HIT" },
+      });
+    }
+
+    // ✅ Requêtes séquentielles par batch pour limiter les connexions simultanées
+    // Batch 1 — toutes les petites tables de référence (légères)
     const [
       religions,
       zodiacSigns,
@@ -25,145 +42,67 @@ export async function GET(request: NextRequest) {
       personalityTypes,
       educationLevels,
       interestCategories,
-      nationalities,
-      cities,
     ] = await Promise.all([
-      // 1️⃣ Religions
       prisma.religion.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 2️⃣ Signes astrologiques
       prisma.zodiacSign.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 3️⃣ Orientations sexuelles
       prisma.sexualOrientation.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 4️⃣ Statuts relationnels
       prisma.relationshipStatus.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 5️⃣ Teints de peau
       prisma.skinTone.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 6️⃣ Types de personnalité
       prisma.personalityType.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 7️⃣ Niveaux d'éducation
       prisma.educationLevel.findMany({
         orderBy: { order: "asc" },
-        select: {
-          id: true,
-          code: true,
-          label: true,
-          emoji: true,
-          order: true,
-        },
+        select: { id: true, code: true, label: true, emoji: true, order: true },
       }),
-
-      // 8️⃣ Catégories d'intérêts (existant)
       prisma.interestCategory.findMany({
-        include: {
-          interests: {
-            orderBy: {
-              name: "asc",
-            },
-          },
-        },
-        orderBy: {
-          order: "asc",
-        },
-      }),
-
-      // 9️⃣ Nationalités
-      prisma.nationality.findMany({
-        orderBy: {
-          nameFr: "asc",
-        },
-        select: {
-          id: true,
-          code: true,
-          nameFr: true,
-          nameEn: true,
-          flag: true,
-        },
-      }),
-
-      // 🔟 Villes
-      prisma.city.findMany({
-        orderBy: [
-          { countryName: "asc" },
-          { stateName: "asc" },
-          { name: "asc" },
-        ],
-        select: {
-          id: true,
-          name: true,
-          stateCode: true,
-          stateName: true,
-          countryCode: true,
-          countryName: true,
-          displayName: true,
-          latitude: true,
-          longitude: true,
-        },
+        include: { interests: { orderBy: { name: "asc" } } },
+        orderBy: { order: "asc" },
       }),
     ]);
 
-    // ✅ FORMAT OPTIMISÉ POUR LE FRONTEND
+    // Batch 2 — tables moyennes, séquentielles après batch 1
+    const nationalities = await prisma.nationality.findMany({
+      orderBy: { nameFr: "asc" },
+      select: { id: true, code: true, nameFr: true, nameEn: true, flag: true },
+    });
+
+    // ✅ Villes — séparées et paginées côté API
+    // On ne charge PAS toutes les villes ici : endpoint dédié /api/cities?search=
+    // On charge seulement un subset léger pour l'initialisation
+    const cities = await prisma.city.findMany({
+      orderBy: [{ countryName: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        stateCode: true,
+        stateName: true,
+        countryCode: true,
+        countryName: true,
+        displayName: true,
+        latitude: true,
+        longitude: true,
+      },
+      take: 500, // ✅ LIMITER — charger le reste via recherche autocomplete
+    });
+
     const response = {
-      // Nouvelles tables de référence
       religions,
       zodiacSigns,
       sexualOrientations,
@@ -171,41 +110,26 @@ export async function GET(request: NextRequest) {
       skinTones,
       personalityTypes,
       educationLevels,
-
-      // Existantes
-      interestCategories: interestCategories.map((category) => ({
-        id: category.id,
-        name: category.name,
-        emoji: category.emoji,
-        interests: category.interests.map((interest) => ({
-          id: interest.id,
-          name: interest.name,
-          emoji: interest.emoji,
+      interestCategories: interestCategories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        emoji: cat.emoji,
+        interests: cat.interests.map((i) => ({
+          id: i.id,
+          name: i.name,
+          emoji: i.emoji,
         })),
       })),
-
-      nationalities: nationalities.map((nat) => ({
-        id: nat.id,
-        code: nat.code,
-        nameFr: nat.nameFr,
-        nameEn: nat.nameEn,
-        flag: nat.flag,
-      })),
-
-      cities: cities.map((city) => ({
-        id: city.id,
-        name: city.name,
-        stateCode: city.stateCode,
-        stateName: city.stateName,
-        countryCode: city.countryCode,
-        countryName: city.countryName,
-        displayName: city.displayName,
-        latitude: city.latitude,
-        longitude: city.longitude,
-      })),
+      nationalities,
+      cities, // subset initial — compléter avec /api/cities?search=
     };
 
-    return NextResponse.json(response);
+    // ✅ Mettre en cache
+    cache = { data: response, timestamp: Date.now() };
+
+    return NextResponse.json(response, {
+      headers: { "X-Cache": "MISS" },
+    });
   } catch (error) {
     console.error("❌ Error fetching reference data:", error);
     return NextResponse.json(

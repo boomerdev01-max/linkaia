@@ -10,8 +10,6 @@ export default defineConfig({
     seed: "tsx ./prisma/seed.ts",
   },
   datasource: {
-    url: env("DATABASE_URL"),
-    // Connexion directe (port 5432)
-    shadowDatabaseUrl: env("DIRECT_URL"),
+    url: env("DIRECT_URL"), // ✅ Connexion directe pour migrate
   },
 });

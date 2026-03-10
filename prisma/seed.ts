@@ -755,7 +755,7 @@ async function seedRBAC() {
   });
 
   await prisma.menu.upsert({
-    where: { name: "Demandes & Factures" },
+    where: { name: "Demandes et factures" },
     update: {
       path: "/admin/finance/invoices",
       icon: "Receipt",
@@ -763,7 +763,7 @@ async function seedRBAC() {
       order: 1,
     },
     create: {
-      name: "Demandes & Factures",
+      name: "Demandes et factures",
       path: "/admin/finance/invoices",
       icon: "Receipt",
       parentId: menuFinance.id,
@@ -941,7 +941,7 @@ async function seedRBAC() {
     Paramètres: ["system.config"],
     Administration: ["system.config", "system.logs"],
     Finances: ["invoice.read"],
-    "Demandes & Factures": ["invoice.read", "invoice.create", "invoice.update"],
+    "Demandes et factures": ["invoice.read", "invoice.create", "invoice.update"],
   };
 
   for (const menu of allMenus) {
