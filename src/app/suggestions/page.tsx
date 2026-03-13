@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
+import Header from "@/components/home/Header";
 import SuggestionsClient from "@/components/suggestions/SuggestionsClient";
 
 export const metadata = {
@@ -10,7 +11,6 @@ export const metadata = {
 };
 
 export default async function SuggestionsPage() {
-  // 1. Vérifier l'authentification Supabase
   const supabase = await createSupabaseServerClient();
   const {
     data: { user: supabaseUser },
@@ -20,7 +20,6 @@ export default async function SuggestionsPage() {
     redirect("/signin");
   }
 
-  // 2. Récupérer l'utilisateur + les champs du profil en une seule requête
   const user = await prisma.user.findUnique({
     where: { supabaseId: supabaseUser.id },
     select: {
@@ -29,14 +28,10 @@ export default async function SuggestionsPage() {
       nom: true,
       email: true,
       level: true,
-      // ─────────────────────────────────────────────
-      // IMPORTANT : pseudo et photo viennent de Profil
-      // ─────────────────────────────────────────────
       profil: {
         select: {
           pseudo: true,
-          profilePhotoUrl: true, // ← champ qui existe dans ton schéma
-          // photos: { ... } n'existe plus → on utilise profilePhotoUrl
+          profilePhotoUrl: true,
         },
       },
     },
@@ -46,16 +41,22 @@ export default async function SuggestionsPage() {
     redirect("/signin");
   }
 
-  // 3. Préparer les données pour le composant client
-  const userForClient = {
+  const formattedUser = {
     id: user.id,
     prenom: user.prenom,
     nom: user.nom,
-    pseudo: user.profil?.pseudo ?? "",
+    pseudo: user.profil?.pseudo ?? user.prenom,
     email: user.email,
     level: user.level,
     image: user.profil?.profilePhotoUrl ?? null,
   };
 
-  return <SuggestionsClient currentUser={userForClient} />;
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header user={formattedUser} />
+      <main className="pt-16">
+        <SuggestionsClient currentUser={formattedUser} />
+      </main>
+    </div>
+  );
 }
