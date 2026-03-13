@@ -131,6 +131,16 @@ model User {
   reportsGiven      Report[] @relation("ReportsGiven")
   reportsReceived   Report[] @relation("ReportsReceived")
   reportsReviewed   Report[] @relation("ReportsReviewed")
+
+  // === WALLET & MONÉTISATION ===
+  wallet            Wallet?
+  creatorScore      CreatorScore?
+  giftsSent         SentGift[]      @relation("GiftsSent")
+  giftsReceived     SentGift[]      @relation("GiftsReceived")
+  livesHosted       Live[]          @relation("LivesHosted")
+  livesWatched      LiveViewer[]    @relation("LivesWatched")
+  liveTickets       LiveTicket[]    @relation("LiveTickets")
+  userBadges        UserBadge[]
   
   // Relations pour les avis
   reviewsGiven      Review[] @relation("ReviewsGiven")
@@ -1562,4 +1572,339 @@ model ClubSubscriptionHistory {
   @@index([action])
   @@index([createdAt])
   @@map("club_subscription_history")
+}
+
+// ============================================================
+// WALLET & TRANSACTIONS
+// ============================================================
+
+model Wallet {
+  id              String  @id @default(uuid())
+  userId          String  @unique @map("user_id")
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // L-Gems = monnaie achetée via Stripe, dépensée pour envoyer des cadeaux
+  lgemsBalance    Int     @default(0) @map("lgems_balance")
+
+  // Diamonds = L-Gems reçus en tant que créateur (après commission 30% plateforme)
+  // Float car 70% de valeurs entières = décimales possibles
+  diamondsBalance Float   @default(0) @map("diamonds_balance")
+
+  transactions    WalletTransaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id       String @id @default(uuid())
+  walletId String @map("wallet_id")
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  // Types possibles :
+  // "purchase"        → achat pack L-Gems via Stripe (Payment Intent)
+  // "activity_reward" → gain gratuit (connexion, complétion profil, etc.)
+  // "gift_sent"       → envoi cadeau (débit L-Gems)
+  // "gift_received"   → réception cadeau (crédit Diamonds après commission)
+  // "live_ticket"     → achat ticket live/webinaire payant
+  // "honor_seat"      → paiement siège d'honneur
+  // "cashout"         → retrait vers devise réelle (Phase 2)
+  // "bonus"           → bonus Ambassadeur de Paix
+  // "refund"          → remboursement
+  type     String
+
+  // Positif = crédit | Négatif = débit
+  amount      Int
+  amountFloat Float? @map("amount_float") // Pour les Diamonds avec décimales
+
+  // "LGEMS" | "DIAMONDS"
+  currency String
+
+  referenceId   String? @map("reference_id")
+  referenceType String? @map("reference_type") // "live" | "post" | "gift" | "pack"
+
+  // Snapshot pour audit comptable
+  balanceBefore Int @map("balance_before")
+  balanceAfter  Int @map("balance_after")
+
+  // Payment Intent Stripe — garantit l'idempotence côté webhook
+  // @unique = protection contre le double-crédit si webhook reçu 2x
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id")
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([walletId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("wallet_transactions")
+}
+
+// ============================================================
+// PACKS L-GEMS (configurables par l'admin)
+// ============================================================
+
+model LGemsPack {
+  id   String @id @default(uuid())
+  code String @unique // "starter_100" | "popular_500" | "pro_1000" | "elite_5000"
+
+  name        String  // "Starter" | "Populaire" | "Pro" | "Élite"
+  description String?
+
+  lgemsAmount Int   @map("lgems_amount")  // 100 | 500 | 1000 | 5000
+  bonusLgems  Int   @default(0) @map("bonus_lgems") // L-Gems bonus offerts
+
+  priceEur Float @map("price_eur") // 0.99 | 4.99 | 9.99 | 44.99
+  priceXof Float @map("price_xof") // équivalent FCFA
+
+  // Price ID Stripe (mode test) — à renseigner dans .env après création
+  stripePriceId String? @map("stripe_price_id")
+
+  isActive   Boolean @default(true)  @map("is_active")
+  isFeatured Boolean @default(false) @map("is_featured") // badge "Le plus populaire"
+  order      Int     @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("lgems_packs")
+}
+
+// ============================================================
+// CADEAUX VIRTUELS
+// ============================================================
+
+model VirtualGift {
+  id   String @id @default(uuid())
+  code String @unique // "pont" | "boussole" | "globe" | "alliance" | "puits_savoir"
+
+  name         String
+  emoji        String
+  description  String?
+  animationUrl String? @map("animation_url") // URL Lottie pour l'effet visuel en live
+
+  lgemsValue Int @map("lgems_value") // Coût pour envoyer ce cadeau
+
+  isImpactGift  Boolean @default(false) @map("is_impact_gift")
+  impactPercent Float   @default(0)     @map("impact_percent") // ex: 0.05 = 5%
+  impactCauseId String? @map("impact_cause_id")
+  impactCause   ImpactCause? @relation(fields: [impactCauseId], references: [id])
+
+  category String  @default("standard") // "standard" | "impact" | "premium"
+  order    Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  sentGifts SentGift[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("virtual_gifts")
+}
+
+model ImpactCause {
+  id          String  @id @default(uuid())
+  name        String
+  description String? @db.Text
+  logoUrl     String? @map("logo_url")
+  isActive    Boolean @default(true) @map("is_active")
+
+  gifts      VirtualGift[]
+  impactLogs ImpactLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("impact_causes")
+}
+
+model SentGift {
+  id String @id @default(uuid())
+
+  senderId String @map("sender_id")
+  sender   User   @relation("GiftsSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  receiverId String @map("receiver_id")
+  receiver   User   @relation("GiftsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  giftId String      @map("gift_id")
+  gift   VirtualGift @relation(fields: [giftId], references: [id])
+
+  quantity    Int @default(1)
+  lgemsAmount Int @map("lgems_amount") // snapshot du prix au moment de l'envoi
+
+  diamondsAwarded Float @default(0) @map("diamonds_awarded") // après commission 30%
+
+  liveId String? @map("live_id")
+  live   Live?   @relation(fields: [liveId], references: [id])
+  postId String? @map("post_id")
+
+  impactAmount Float @default(0) @map("impact_amount")
+
+  message String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([liveId])
+  @@index([postId])
+  @@index([createdAt])
+  @@map("sent_gifts")
+}
+
+model ImpactLog {
+  id      String      @id @default(uuid())
+  causeId String      @map("cause_id")
+  cause   ImpactCause @relation(fields: [causeId], references: [id])
+
+  amount   Float
+  currency String // "EUR" | "USD" | "XOF"
+  period   String // "YYYY-MM"
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([causeId, period])
+  @@map("impact_logs")
+}
+
+// ============================================================
+// LIVES & WEBINAIRES (prêt pour LiveKit)
+// ============================================================
+
+model Live {
+  id     String @id @default(uuid())
+  hostId String @map("host_id")
+  host   User   @relation("LivesHosted", fields: [hostId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String? @db.Text
+  thumbnailUrl String? @map("thumbnail_url")
+
+  type   String @default("live")      // "live" | "webinar" | "speed_dating"
+  status String @default("scheduled") // "scheduled" | "live" | "ended" | "cancelled"
+
+  // LiveKit — Room name unique, tokens générés à la demande (jamais stockés)
+  livekitRoomName String? @unique @map("livekit_room_name")
+
+  isFree           Boolean @default(true)  @map("is_free")
+  ticketPriceLgems Int     @default(0)     @map("ticket_price_lgems")
+  freeMinutes      Int     @default(0)     @map("free_minutes")
+
+  honorSeatEnabled  Boolean @default(false) @map("honor_seat_enabled")
+  honorSeatPrice    Int     @default(0)     @map("honor_seat_price")
+  honorSeatDuration Int     @default(120)   @map("honor_seat_duration")
+
+  peakViewers      Int @default(0) @map("peak_viewers")
+  totalGiftsLgems  Int @default(0) @map("total_gifts_lgems")
+  totalTicketsSold Int @default(0) @map("total_tickets_sold")
+
+  viewers LiveViewer[]
+  gifts   SentGift[]
+  tickets LiveTicket[]
+
+  scheduledAt DateTime? @map("scheduled_at")
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt      @map("updated_at")
+
+  @@index([hostId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("lives")
+}
+
+model LiveViewer {
+  id     String @id @default(uuid())
+  liveId String @map("live_id")
+  live   Live   @relation(fields: [liveId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation("LivesWatched", fields: [userId], references: [id], onDelete: Cascade)
+
+  role     String    @default("viewer") // "viewer" | "honor_seat"
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  leftAt   DateTime? @map("left_at")
+
+  watchDurationSeconds Int @default(0) @map("watch_duration_seconds")
+
+  @@unique([liveId, userId])
+  @@index([liveId])
+  @@map("live_viewers")
+}
+
+model LiveTicket {
+  id     String @id @default(uuid())
+  liveId String @map("live_id")
+  live   Live   @relation(fields: [liveId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation("LiveTickets", fields: [userId], references: [id], onDelete: Cascade)
+
+  lgemsPaid   Int      @map("lgems_paid")
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+
+  @@unique([liveId, userId])
+  @@index([liveId])
+  @@map("live_tickets")
+}
+
+// ============================================================
+// BADGES & GAMIFICATION
+// ============================================================
+
+model Badge {
+  id          String  @id @default(uuid())
+  code        String  @unique // "philanthrope" | "pont_des_cultures" | "legende_linkaia"
+  name        String
+  emoji       String
+  description String?
+  level       Int     @default(1)
+  criteriaDescription String? @map("criteria_description")
+
+  userBadges UserBadge[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id      String @id @default(uuid())
+  userId  String @map("user_id")
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId String @map("badge_id")
+  badge   Badge  @relation(fields: [badgeId], references: [id])
+
+  earnedAt DateTime @default(now()) @map("earned_at")
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@map("user_badges")
+}
+
+// ============================================================
+// CREATOR SCORE
+// ============================================================
+
+model CreatorScore {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  impactScore      Int   @default(0) @map("impact_score")
+  reportRate       Float @default(0) @map("report_rate")
+  matchSuccessRate Float @default(0) @map("match_success_rate")
+  responseRate     Float @default(0) @map("response_rate")
+
+  totalLgemsEarned     Int   @default(0) @map("total_lgems_earned")
+  totalDiamondsEarned  Float @default(0) @map("total_diamonds_earned")
+  totalImpactGenerated Float @default(0) @map("total_impact_generated")
+
+  bonusEligible Boolean   @default(false) @map("bonus_eligible")
+  lastBonusAt   DateTime? @map("last_bonus_at")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("creator_scores")
 }

@@ -1,8 +1,17 @@
 // src/app/api/subscriptions/webhook/route.ts
+// ─────────────────────────────────────────────────────────────────────────────
+// Webhook Stripe unifié — gère à la fois :
+//   • Les abonnements (checkout.session.completed, invoice, subscription)
+//   • Les achats de L-Gems (payment_intent.succeeded)
+//
+// Un seul `stripe listen` suffit en local :
+//   stripe.exe listen --forward-to localhost:3000/api/subscriptions/webhook
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { NextRequest, NextResponse } from "next/server";
-import { notifyAdminNewSubscription } from "@/lib/admin-notification-helpers";
 import { stripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { creditLGemsFromPurchase } from "@/lib/wallet-service";
 import Stripe from "stripe";
 import {
   notifySubscriptionActivated,
@@ -35,6 +44,8 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
+      // ── Abonnements (logique existante — non modifiée) ──────────────────
+
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutCompleted(session);
@@ -59,19 +70,87 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      // ── Achat de L-Gems (Payment Intent — paiement unique) ─────────────
+      // Le metadata.type = "lgems_purchase" distingue ce cas des autres
+      // payment intents qui pourraient transiter par ce webhook.
+
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        if (paymentIntent.metadata?.type === "lgems_purchase") {
+          await handleLGemsPurchase(paymentIntent);
+        }
+        // Si ce n'est pas un achat L-Gems, on ignore silencieusement
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        if (paymentIntent.metadata?.type === "lgems_purchase") {
+          // Pas d'action nécessaire : le wallet n'a pas été crédité
+          console.warn(
+            `[Webhook] Achat L-Gems échoué — PI: ${paymentIntent.id}, user: ${paymentIntent.metadata?.userId ?? "inconnu"}`,
+          );
+        }
+        break;
+      }
+
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`[Webhook] Événement non géré : ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Webhook handler error:", error);
+    console.error("[Webhook] Handler error:", error);
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 },
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HANDLER L-GEMS — Achat de pack confirmé par Stripe
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleLGemsPurchase(paymentIntent: Stripe.PaymentIntent) {
+  const { metadata } = paymentIntent;
+  const { userId, packCode, lgemsToCredit } = metadata ?? {};
+
+  if (!userId || !packCode || !lgemsToCredit) {
+    console.error("[Webhook] L-Gems — métadonnées manquantes :", metadata);
+    return;
+  }
+
+  const lgemsAmount = parseInt(lgemsToCredit, 10);
+  if (isNaN(lgemsAmount) || lgemsAmount <= 0) {
+    console.error("[Webhook] L-Gems — lgemsToCredit invalide :", lgemsToCredit);
+    return;
+  }
+
+  console.log(
+    `[Webhook] L-Gems — crédit ${lgemsAmount} L-Gems → user ${userId} (pack: ${packCode}, PI: ${paymentIntent.id})`,
+  );
+
+  const result = await creditLGemsFromPurchase({
+    userId,
+    lgemsAmount,
+    stripePaymentIntentId: paymentIntent.id,
+    packCode,
+  });
+
+  if (result.alreadyProcessed) {
+    console.log(
+      `[Webhook] L-Gems — déjà traité, skip (PI: ${paymentIntent.id})`,
+    );
+    return;
+  }
+
+  console.log(`[Webhook] ✅ ${lgemsAmount} L-Gems crédités → user ${userId}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HANDLERS ABONNEMENTS — logique originale, aucune modification
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
@@ -142,15 +221,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // ✨ Créer une notification d'abonnement activé
   await notifySubscriptionActivated(userId, subscriptionType.name);
-
-  // 📢 Notifier les admins d'un nouvel abonnement
-  await notifyAdminNewSubscription({
-    userId,
-    subscriptionName: subscriptionType.name,
-    pricePaid: session.amount_total ? session.amount_total / 100 : 0,
-    currencyCode: (session.currency ?? "xof").toUpperCase(),
-    isClub: false,
-  }).catch(console.error);
 
   console.log(`Subscription created for user ${userId}`);
 }

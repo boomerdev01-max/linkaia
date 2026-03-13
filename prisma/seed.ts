@@ -941,7 +941,11 @@ async function seedRBAC() {
     Paramètres: ["system.config"],
     Administration: ["system.config", "system.logs"],
     Finances: ["invoice.read"],
-    "Demandes et factures": ["invoice.read", "invoice.create", "invoice.update"],
+    "Demandes et factures": [
+      "invoice.read",
+      "invoice.create",
+      "invoice.update",
+    ],
   };
 
   for (const menu of allMenus) {
@@ -1564,6 +1568,224 @@ async function seedReactions() {
   console.log("✅ Reaction Types seeded");
 }
 
+export async function seedWalletData(prisma: any) {
+  console.log("💎 Seeding Wallet Data...");
+
+  // ── 1. Causes ONG ──────────────────────────────────────────────────────────
+  const causeEducation = await prisma.impactCause.upsert({
+    where: { id: "cause-education-001" },
+    update: {},
+    create: {
+      id: "cause-education-001",
+      name: "Éducation en Afrique",
+      description:
+        "Financement de fournitures scolaires pour des enfants en zones rurales",
+      isActive: true,
+    },
+  });
+
+  const causeEau = await prisma.impactCause.upsert({
+    where: { id: "cause-eau-001" },
+    update: {},
+    create: {
+      id: "cause-eau-001",
+      name: "Accès à l'eau potable",
+      description: "Construction de puits et systèmes de purification",
+      isActive: true,
+    },
+  });
+
+  console.log("✅ Impact Causes seeded");
+
+  // ── 2. Cadeaux Virtuels ────────────────────────────────────────────────────
+  const gifts = [
+    // Standard
+    {
+      code: "pont",
+      name: "Le Pont",
+      emoji: "🌉",
+      description: "Symbole de connexion entre deux cultures",
+      lgemsValue: 5,
+      isImpactGift: false,
+      category: "standard",
+      order: 1,
+    },
+    {
+      code: "boussole",
+      name: "La Boussole",
+      emoji: "🧭",
+      description: "Guide vers de belles rencontres",
+      lgemsValue: 10,
+      isImpactGift: false,
+      category: "standard",
+      order: 2,
+    },
+    {
+      code: "globe",
+      name: "Le Globe",
+      emoji: "🌍",
+      description: "L'amour n'a pas de frontières",
+      lgemsValue: 25,
+      isImpactGift: false,
+      category: "standard",
+      order: 3,
+    },
+    {
+      code: "alliance",
+      name: "L'Alliance",
+      emoji: "💍",
+      description: "Un gage d'amour et d'engagement",
+      lgemsValue: 50,
+      isImpactGift: false,
+      category: "premium",
+      order: 1,
+    },
+    {
+      code: "etoile_filante",
+      name: "Étoile Filante",
+      emoji: "🌠",
+      description: "Un vœu pour votre avenir",
+      lgemsValue: 100,
+      isImpactGift: false,
+      category: "premium",
+      order: 2,
+    },
+    // Impact
+    {
+      code: "puits_savoir",
+      name: "Puits de Savoir",
+      emoji: "📚",
+      description: "5% reversé à l'éducation en Afrique",
+      lgemsValue: 20,
+      isImpactGift: true,
+      impactPercent: 0.05,
+      impactCauseId: causeEducation.id,
+      category: "impact",
+      order: 1,
+    },
+    {
+      code: "goutte_eau",
+      name: "Goutte d'Eau",
+      emoji: "💧",
+      description: "5% reversé pour l'accès à l'eau potable",
+      lgemsValue: 20,
+      isImpactGift: true,
+      impactPercent: 0.05,
+      impactCauseId: causeEau.id,
+      category: "impact",
+      order: 2,
+    },
+  ];
+
+  for (const gift of gifts) {
+    await prisma.virtualGift.upsert({
+      where: { code: gift.code },
+      update: gift,
+      create: { ...gift, isActive: true },
+    });
+  }
+
+  console.log(`✅ ${gifts.length} virtual gifts seeded`);
+
+  // ── 3. Packs L-Gems ────────────────────────────────────────────────────────
+  // NOTE : les stripePriceId seront renseignés via .env après création dans Stripe
+  const packs = [
+    {
+      code: "starter_100",
+      name: "Starter",
+      description: "Parfait pour débuter",
+      lgemsAmount: 100,
+      bonusLgems: 0,
+      priceEur: 0.99,
+      priceXof: 650,
+      isFeatured: false,
+      order: 1,
+    },
+    {
+      code: "popular_500",
+      name: "Populaire",
+      description: "+50 L-Gems offerts",
+      lgemsAmount: 500,
+      bonusLgems: 50,
+      priceEur: 4.99,
+      priceXof: 3250,
+      isFeatured: true,
+      order: 2,
+    },
+    {
+      code: "pro_1000",
+      name: "Pro",
+      description: "+150 L-Gems offerts",
+      lgemsAmount: 1000,
+      bonusLgems: 150,
+      priceEur: 9.99,
+      priceXof: 6500,
+      isFeatured: false,
+      order: 3,
+    },
+    {
+      code: "elite_5000",
+      name: "Élite",
+      description: "+1000 L-Gems offerts",
+      lgemsAmount: 5000,
+      bonusLgems: 1000,
+      priceEur: 44.99,
+      priceXof: 29250,
+      isFeatured: false,
+      order: 4,
+    },
+  ];
+
+  for (const pack of packs) {
+    await prisma.lGemsPack.upsert({
+      where: { code: pack.code },
+      update: pack,
+      create: { ...pack, isActive: true },
+    });
+  }
+
+  console.log(`✅ ${packs.length} L-Gems packs seeded`);
+
+  // ── 4. Badges Gamification ─────────────────────────────────────────────────
+  const badges = [
+    {
+      code: "philanthrope",
+      name: "Philanthrope",
+      emoji: "🤝",
+      description: "Donateur régulier de cadeaux virtuels",
+      level: 1,
+      criteriaDescription: "Avoir envoyé au moins 10 cadeaux virtuels",
+    },
+    {
+      code: "pont_des_cultures",
+      name: "Pont des Cultures",
+      emoji: "🌉",
+      description: "Créateur ayant connecté plusieurs pays",
+      level: 2,
+      criteriaDescription: "Avoir une audience dans au moins 5 pays différents",
+    },
+    {
+      code: "legende_linkaia",
+      name: "Légende Linkaïa",
+      emoji: "👑",
+      description: "Célébrité ayant parrainé une entreprise sociale réelle",
+      level: 3,
+      criteriaDescription: "Avoir parrainé une organisation sociale partenaire",
+    },
+  ];
+
+  for (const badge of badges) {
+    await prisma.badge.upsert({
+      where: { code: badge.code },
+      update: badge,
+      create: badge,
+    });
+  }
+
+  console.log(`✅ ${badges.length} badges seeded`);
+  console.log("🎉 Wallet data seeding complete!");
+}
+
 async function seedReferenceData() {
   console.log("📚 Seeding Reference Data for Preferences...");
 
@@ -1744,6 +1966,7 @@ async function main() {
   await seedChatData(); // 7️⃣ Chat
   await seedInterests(); // 8️⃣ Centres d'intérêt
   await seedReactions(); // 9️⃣ Réactions
+  await seedWalletData(prisma); // 10️⃣ Wallet & cadeaux
 
   console.log("🎉 Seed completed successfully!");
 }
