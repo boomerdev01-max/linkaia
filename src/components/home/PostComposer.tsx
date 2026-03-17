@@ -17,7 +17,7 @@ interface User {
 
 interface PostComposerProps {
   user: User;
-  onPostCreated?: () => void; // AJOUTÉ: prop pour le callback
+  onPostCreated?: () => void;
 }
 
 export default function PostComposer({
@@ -27,9 +27,9 @@ export default function PostComposer({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handlePostCreated = () => {
-    setIsModalOpen(false); // Fermer le modal
+    setIsModalOpen(false);
     if (onPostCreated) {
-      onPostCreated(); // Appeler le callback si fourni
+      onPostCreated();
     }
   };
 
@@ -58,16 +58,24 @@ export default function PostComposer({
             )}
           </div>
 
-          {/* Bouton de texte (réduit) */}
+          {/* Bouton de texte responsive */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-left text-gray-500 dark:text-gray-400 transition-colors grow h-12"
+            className="px-4 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-left text-gray-500 dark:text-gray-400 transition-colors grow h-12 overflow-hidden"
           >
-            Quoi de neuf, {user.prenom} ?
+            {/* Version desktop - affichage normal */}
+            <span className="hidden sm:inline">
+              Quoi de neuf, {user.prenom} ?
+            </span>
+
+            {/* Version mobile - texte tronqué */}
+            <span className="sm:hidden block truncate max-w-30">
+              Quoi de neuf ?
+            </span>
           </button>
 
-          {/* Icônes sur la même ligne */}
-          <div className="flex items-center gap-1 shrink-0 h-12">
+          {/* Icônes sur la même ligne - version desktop */}
+          <div className="hidden sm:flex items-center gap-1 shrink-0 h-12">
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-3 h-full text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-lg"
@@ -92,6 +100,25 @@ export default function PostComposer({
               <Smile className="w-6 h-6 text-yellow-500" />
             </button>
           </div>
+
+          {/* Version mobile - icônes simplifiées */}
+          <div className="flex sm:hidden items-center gap-1 shrink-0 h-12">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-2 h-full text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-lg"
+              aria-label="Ajouter un média"
+            >
+              <ImageIcon className="w-5 h-5 text-green-500" />
+            </button>
+
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-2 h-full text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-lg"
+              aria-label="Ajouter un emoji"
+            >
+              <Smile className="w-5 h-5 text-yellow-500" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -100,7 +127,7 @@ export default function PostComposer({
         user={user}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onPostCreated={handlePostCreated} // AJOUTÉ: passer le callback au modal
+        onPostCreated={handlePostCreated}
       />
     </>
   );
