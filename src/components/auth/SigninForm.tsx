@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, CircleCheck } from "lucide-react";
+import { Lock, CircleCheck, Eye, EyeOff } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 const testimonials = [
@@ -32,6 +32,7 @@ export default function SigninPage() {
     password: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
@@ -115,14 +116,14 @@ export default function SigninPage() {
       <div className="relative flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16 xl:px-24 overflow-hidden">
         {/* Ambient Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-pink-500/10 to-purple-500/10 blur-[100px]" />
-          <div className="absolute top-[60%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-orange-500/10 to-yellow-500/10 blur-[100px]" />
+          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-linear-to-br from-pink-500/10 to-purple-500/10 blur-[100px]" />
+          <div className="absolute top-[60%] -right-[10%] w-[50%] h-[50%] rounded-full bg-linear-to-br from-orange-500/10 to-yellow-500/10 blur-[100px]" />
         </div>
 
         <div className="mx-auto w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="mb-10 text-center lg:text-left">
             <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              Bon <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400">retour !</span>
+              Bon <span className="text-transparent bg-clip-text bg-linear-to-rpink-500 to-orange-400">retour !</span>
             </h1>
             <p className="mt-3 text-base text-gray-500 dark:text-gray-400 font-medium">
               Connectez-vous à votre compte {process.env.NEXT_PUBLIC_APP_NAME || "Linkaïa"}.
@@ -182,21 +183,31 @@ export default function SigninPage() {
                   Mot de passe oublié ?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className={`h-12 rounded-2xl bg-gray-50/50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 px-4 transition-all focus:bg-white dark:focus:bg-zinc-950 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 ${errors.password ? "border-red-500 ring-red-500/20 focus:border-red-500" : ""}`}
-                disabled={loading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className={`h-12 rounded-2xl bg-gray-50/50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 px-4 pr-12 transition-all focus:bg-white dark:focus:bg-zinc-950 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 ${errors.password ? "border-red-500 ring-red-500/20 focus:border-red-500" : ""}`}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
               {errors.password && <p className="text-xs text-red-500 ml-1 font-medium animate-in fade-in slide-in-from-top-1">{errors.password}</p>}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full mt-2 rounded-full h-14 text-lg font-bold bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white shadow-xl shadow-pink-500/25 transition-all hover:scale-[1.02] active:scale-95" 
+              className="w-full mt-2 rounded-full h-14 text-lg font-bold bg-linear-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white shadow-xl shadow-pink-500/25 transition-all hover:scale-[1.02] active:scale-95" 
               disabled={loading}
             >
               {loading ? "Connexion en cours..." : "Se connecter"}
@@ -213,7 +224,7 @@ export default function SigninPage() {
       </div>
 
       {/* Right Side - Testimonials (Badoo/Bumble Style) */}
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-16 overflow-hidden bg-gradient-to-br from-purple-500 via-pink-400 to-rose-400">
+      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-16 overflow-hidden bg-linear-to-br from-purple-500 via-pink-400 to-rose-400">
         {/* Decorative background elements */}
         <div className="absolute inset-0 bg-black/5 mix-blend-overlay"></div>
         <div className="absolute -top-20 -right-20 w-96 h-96 bg-white/20 rounded-full blur-3xl animate-pulse" />
@@ -236,7 +247,7 @@ export default function SigninPage() {
                 {testimonials[currentTestimonial].quote}
               </p>
               <footer className="flex items-center gap-5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-white/40 to-white/10 text-2xl font-bold text-white shadow-inner border border-white/30 backdrop-blur-md">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-tr from-white/40 to-white/10 text-2xl font-bold text-white shadow-inner border border-white/30 backdrop-blur-md">
                   {testimonials[currentTestimonial].author.charAt(1).toUpperCase()}
                 </div>
                 <div>
