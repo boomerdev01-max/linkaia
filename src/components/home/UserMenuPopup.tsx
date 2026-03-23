@@ -1,4 +1,4 @@
-// src/components/home/UserMenuPopup.tsx (VERSION MISE À JOUR)
+// src/components/home/UserMenuPopup.tsx
 "use client";
 
 import Link from "next/link";
@@ -13,8 +13,11 @@ import {
   Shield,
   CreditCard,
   Sparkles,
-  Crown, // ✅ AJOUT
+  Crown,
+  Wallet, // ← NOUVEAU
+  Zap, // ← NOUVEAU (icône Recharger)
 } from "lucide-react";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 interface UserMenuPopupProps {
   user: {
@@ -35,6 +38,9 @@ export default function UserMenuPopup({
   onLogoutClick,
   onClose,
 }: UserMenuPopupProps) {
+  // Solde L-Gems pour l'afficher dans l'entrée wallet
+  const { balance } = useWalletBalance();
+
   const menuItems = [
     {
       icon: Sparkles,
@@ -43,15 +49,32 @@ export default function UserMenuPopup({
       badge: "Matchs",
       highlight: true,
     },
-    // ✅ AJOUT : Entrée Club fermé LWB
     {
       icon: Crown,
       label: "Club fermé LWB",
       href: "/club/checkout",
       badge: "Premium",
       highlight: true,
-      clubExclusive: true, // Flag spécial pour styling
+      clubExclusive: true,
     },
+    // ── WALLET ─────────────────────────────────────────────────────────────
+    {
+      icon: Wallet,
+      label: "Mon Wallet",
+      href: "/wallet",
+      badge: balance ? `${balance.lgemsBalance.toLocaleString()} 💎` : null,
+      highlight: false,
+      isWallet: true,
+    },
+    {
+      icon: Zap,
+      label: "Recharger mes L-Gems",
+      href: "/wallet/recharge",
+      badge: null,
+      highlight: false,
+      isRecharge: true,
+    },
+    // ───────────────────────────────────────────────────────────────────────
     {
       icon: Shield,
       label: "Confidentialité",
@@ -100,7 +123,7 @@ export default function UserMenuPopup({
 
   return (
     <div className="w-80 bg-white dark:bg-gray-900 shadow-xl rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-      {/* Header du menu */}
+      {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-linear-to-r from-[#0F4C5C]/5 to-[#B88A4F]/5">
         <div className="flex items-center gap-3">
           <div className="relative w-12 h-12 rounded-full border-2 border-[#B88A4F] overflow-hidden bg-linear-to-br from-[#0F4C5C] to-[#B88A4F]">
@@ -138,9 +161,9 @@ export default function UserMenuPopup({
       </div>
 
       {/* Menu items */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="max-h-105 overflow-y-auto">
         {menuItems.map((item, index) => {
-          // Si c'est le bouton de déconnexion
+          // Déconnexion
           if (item.isLogout) {
             return (
               <button
@@ -161,9 +184,10 @@ export default function UserMenuPopup({
             );
           }
 
-          // ✅ MODIFICATION : Styling spécial pour Club LWB
           const isHighlighted = item.highlight;
-          const isClubExclusive = item.clubExclusive;
+          const isClubExclusive = (item as any).clubExclusive;
+          const isWallet = (item as any).isWallet;
+          const isRecharge = (item as any).isRecharge;
 
           return (
             <Link
@@ -175,7 +199,9 @@ export default function UserMenuPopup({
                   ? "bg-linear-to-r from-[#0F4C5C]/10 to-[#0A3A47]/10"
                   : isHighlighted
                     ? "bg-linear-to-r from-[#0F4C5C]/5 to-[#B88A4F]/5"
-                    : ""
+                    : isRecharge
+                      ? "bg-linear-to-r from-amber-50/60 to-orange-50/40 dark:from-amber-900/10 dark:to-orange-900/5"
+                      : ""
               }`}
             >
               <div className="flex items-center gap-3">
@@ -185,7 +211,9 @@ export default function UserMenuPopup({
                       ? "text-[#0F4C5C] dark:text-[#B88A4F]"
                       : isHighlighted
                         ? "text-[#B88A4F]"
-                        : "text-gray-600 dark:text-gray-400"
+                        : isWallet || isRecharge
+                          ? "text-amber-500"
+                          : "text-gray-600 dark:text-gray-400"
                   }`}
                 />
                 <span
@@ -194,22 +222,27 @@ export default function UserMenuPopup({
                       ? "text-[#0F4C5C] dark:text-[#B88A4F] font-bold"
                       : isHighlighted
                         ? "text-[#0F4C5C] dark:text-[#B88A4F] font-semibold"
-                        : "text-gray-700 dark:text-gray-300"
+                        : isWallet || isRecharge
+                          ? "text-amber-700 dark:text-amber-400 font-semibold"
+                          : "text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   {item.label}
                 </span>
               </div>
+
               {item.badge && (
                 <span
-                  className={`text-xs px-2 py-1 rounded-full ${
+                  className={`text-xs px-2 py-1 rounded-full font-medium ${
                     isClubExclusive
                       ? "bg-linear-to-r from-[#0F4C5C] to-[#0A3A47] text-white font-semibold"
                       : isHighlighted
                         ? "bg-linear-to-r from-[#0F4C5C] to-[#B88A4F] text-white"
-                        : item.badge === "Premium"
-                          ? "bg-linear-to-r from-[#B88A4F] to-[#FF5A5F] text-white"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                        : isWallet
+                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                          : item.badge === "Premium"
+                            ? "bg-linear-to-r from-[#B88A4F] to-[#FF5A5F] text-white"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {item.badge}
@@ -220,7 +253,7 @@ export default function UserMenuPopup({
         })}
       </div>
 
-      {/* Footer avec les liens légaux */}
+      {/* Footer légal */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 justify-center">
           <Link

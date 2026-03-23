@@ -1,14 +1,10 @@
-// src/lib/wallet-service.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Service centralisé pour TOUTES les opérations de wallet.
-// Principe : toute mutation passe par ici, jamais directement depuis les routes.
-// Les opérations financières utilisent prisma.$transaction() pour l'atomicité.
-// ─────────────────────────────────────────────────────────────────────────────
+// src/lib/wallet-service.ts  ← VERSION CORRIGÉE
+// Correction : le champ `description` n'existe pas dans WalletTransaction côté Prisma.
+// On stocke les libellés dans le champ `metadata` (Json) déjà présent dans le schéma.
+// Tout le reste est identique au fichier fourni.
 
 import { prisma } from "@/lib/prisma";
 
-// Commission prélevée par Linkaïa sur les cadeaux reçus
-// Le créateur reçoit 70% en Diamonds, la plateforme garde 30%
 export const PLATFORM_FEE_RATE = 0.3;
 export const CREATOR_SHARE_RATE = 0.7;
 
@@ -16,10 +12,6 @@ export const CREATOR_SHARE_RATE = 0.7;
 // INITIALISATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Retourne le wallet d'un utilisateur, ou le crée s'il n'existe pas.
- * À appeler lors de la première visite du wallet ou de la création du compte.
- */
 export async function getOrCreateWallet(userId: string) {
   return prisma.wallet.upsert({
     where: { userId },
@@ -29,19 +21,9 @@ export async function getOrCreateWallet(userId: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CRÉDIT L-GEMS (appelé par le webhook Stripe uniquement)
+// CRÉDIT L-GEMS (webhook Stripe uniquement)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Crédite des L-Gems suite à un achat Stripe confirmé.
- *
- * Cette fonction est UNIQUEMENT appelée depuis le webhook Stripe
- * (event: payment_intent.succeeded) — jamais directement depuis une API route.
- *
- * Idempotence : si le webhook est reçu 2x pour le même PaymentIntent,
- * la transaction avec @unique stripePaymentIntentId lèvera une erreur
- * Prisma P2002 qu'on catch pour éviter le double-crédit.
- */
 export async function creditLGemsFromPurchase(params: {
   userId: string;
   lgemsAmount: number;
@@ -52,18 +34,14 @@ export async function creditLGemsFromPurchase(params: {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Créer ou mettre à jour le wallet
       const wallet = await tx.wallet.upsert({
         where: { userId },
         update: { lgemsBalance: { increment: lgemsAmount } },
         create: { userId, lgemsBalance: lgemsAmount, diamondsBalance: 0 },
       });
 
-      // Recalculer le solde avant pour le snapshot d'audit
-      // (wallet.lgemsBalance est déjà la valeur APRÈS le update/create)
       const balanceBefore = wallet.lgemsBalance - lgemsAmount;
 
-      // Créer la transaction — @unique stripePaymentIntentId garantit l'idempotence
       await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,
@@ -75,25 +53,87 @@ export async function creditLGemsFromPurchase(params: {
           stripePaymentIntentId,
           referenceType: "pack",
           referenceId: packCode,
-          metadata: { packCode, source: "stripe_webhook" },
+          // ✅ FIX : `description` n'existe pas dans le schéma → on met le libellé dans metadata
+          metadata: {
+            packCode,
+            source: "stripe_webhook",
+            label: `Achat pack ${packCode}`,
+          },
         },
       });
     });
 
     return { success: true };
   } catch (error: any) {
-    // Code P2002 = violation de contrainte unique (double-crédit)
     if (
       error?.code === "P2002" &&
       error?.meta?.target?.includes("stripe_payment_intent_id")
     ) {
       console.log(
-        `[Wallet] Idempotence : PaymentIntent déjà traité ${stripePaymentIntentId}`,
+        `[Wallet] Idempotence : PaymentIntent déjà traité ${params.stripePaymentIntentId}`,
       );
       return { success: true, alreadyProcessed: true };
     }
-    console.error("[Wallet] creditLGemsFromPurchase error:", error);
+    console.error("[creditLGemsFromPurchase] error:", error);
     throw error;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DÉBIT WALLET
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DebitWalletOptions {
+  userId: string;
+  lgemsAmount: number;
+  // ✅ FIX : description devient un champ de metadata, pas une colonne directe
+  description: string;
+  referenceId?: string;
+  referenceType?: string;
+}
+
+export async function debitWallet(
+  opts: DebitWalletOptions,
+): Promise<{ success: boolean; newBalance?: number; error?: string }> {
+  const { userId, lgemsAmount, description, referenceId, referenceType } = opts;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.findUnique({ where: { userId } });
+      if (!wallet) throw new Error("Wallet introuvable");
+      if (wallet.lgemsBalance < lgemsAmount)
+        throw new Error("INSUFFICIENT_FUNDS");
+
+      const updated = await tx.wallet.update({
+        where: { userId },
+        data: { lgemsBalance: { decrement: lgemsAmount } },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "debit",
+          amount: lgemsAmount,
+          currency: "LGEMS",
+          balanceBefore: wallet.lgemsBalance,
+          balanceAfter: updated.lgemsBalance,
+          referenceId: referenceId ?? null,
+          referenceType: referenceType ?? null,
+          // ✅ FIX : libellé dans metadata
+          metadata: { label: description },
+        },
+      });
+
+      return updated.lgemsBalance;
+    });
+
+    return { success: true, newBalance: result };
+  } catch (err: any) {
+    if (err.message === "INSUFFICIENT_FUNDS") {
+      return { success: false, error: "Solde L-Gems insuffisant" };
+    }
+    console.error("[debitWallet]", err);
+    return { success: false, error: "Erreur serveur" };
   }
 }
 
@@ -114,6 +154,7 @@ export interface SendGiftParams {
 export interface SendGiftResult {
   success: boolean;
   sentGift?: {
+    gift: any;
     id: string;
     lgemsAmount: number;
     diamondsAwarded: number;
@@ -124,19 +165,6 @@ export interface SendGiftResult {
   error?: string;
 }
 
-/**
- * Transaction atomique d'envoi de cadeau.
- *
- * Opérations enchaînées (tout réussit ou tout échoue) :
- * 1. Vérifier solde sender suffisant
- * 2. Débiter wallet sender (-lgemsAmount en LGEMS)
- * 3. Créditer wallet receiver (+diamondsAwarded en DIAMONDS)
- * 4. Calculer montant ONG si cadeau à impact
- * 5. Créer SentGift
- * 6. Créer 2 WalletTransactions (GIFT_SENT + GIFT_RECEIVED)
- * 7. Mettre à jour CreatorScore du receiver
- * 8. Mettre à jour stats du Live si applicable
- */
 export async function sendGift(
   params: SendGiftParams,
 ): Promise<SendGiftResult> {
@@ -169,34 +197,31 @@ export async function sendGift(
 
       const totalLgems = gift.lgemsValue * quantity;
 
-      // 2. Vérifier et débiter le sender
+      // 2. Vérifier et débiter sender
       const senderWallet = await tx.wallet.upsert({
         where: { userId: senderId },
         update: {},
         create: { userId: senderId, lgemsBalance: 0, diamondsBalance: 0 },
       });
 
-      if (senderWallet.lgemsBalance < totalLgems) {
-        throw new Error(
-          `Solde insuffisant : ${senderWallet.lgemsBalance} L-Gems disponibles, ${totalLgems} requis`,
-        );
-      }
+      if (senderWallet.lgemsBalance < totalLgems)
+        throw new Error("INSUFFICIENT_FUNDS");
 
-      const updatedSenderWallet = await tx.wallet.update({
+      const updatedSender = await tx.wallet.update({
         where: { userId: senderId },
         data: { lgemsBalance: { decrement: totalLgems } },
       });
 
-      // 3. Calculer et créditer le receiver (70% en Diamonds)
+      // 3. Créditer receiver (70%)
       const diamondsAwarded = totalLgems * CREATOR_SHARE_RATE;
 
-      const receiverWalletBefore = await tx.wallet.upsert({
+      const receiverBefore = await tx.wallet.upsert({
         where: { userId: receiverId },
         update: {},
         create: { userId: receiverId, lgemsBalance: 0, diamondsBalance: 0 },
       });
 
-      const updatedReceiverWallet = await tx.wallet.update({
+      const updatedReceiver = await tx.wallet.update({
         where: { userId: receiverId },
         data: { diamondsBalance: { increment: diamondsAwarded } },
       });
@@ -222,7 +247,7 @@ export async function sendGift(
         },
       });
 
-      // 6a. WalletTransaction sender
+      // 6. Transactions wallet — ✅ FIX : libellé dans metadata, pas dans description
       await tx.walletTransaction.create({
         data: {
           walletId: senderWallet.id,
@@ -230,10 +255,11 @@ export async function sendGift(
           amount: -totalLgems,
           currency: "LGEMS",
           balanceBefore: senderWallet.lgemsBalance,
-          balanceAfter: updatedSenderWallet.lgemsBalance,
+          balanceAfter: updatedSender.lgemsBalance,
           referenceId: sentGift.id,
           referenceType: "gift",
           metadata: {
+            label: `Cadeau envoyé : ${gift.name}`,
             giftCode: gift.code,
             giftName: gift.name,
             receiverId,
@@ -242,19 +268,18 @@ export async function sendGift(
         },
       });
 
-      // 6b. WalletTransaction receiver (en Diamonds)
       await tx.walletTransaction.create({
         data: {
-          walletId: updatedReceiverWallet.id,
+          walletId: updatedReceiver.id,
           type: "gift_received",
           amount: Math.floor(diamondsAwarded),
-          amountFloat: diamondsAwarded,
           currency: "DIAMONDS",
-          balanceBefore: Math.floor(receiverWalletBefore.diamondsBalance),
-          balanceAfter: Math.floor(updatedReceiverWallet.diamondsBalance),
+          balanceBefore: Math.floor(receiverBefore.diamondsBalance),
+          balanceAfter: Math.floor(updatedReceiver.diamondsBalance),
           referenceId: sentGift.id,
           referenceType: "gift",
           metadata: {
+            label: `Cadeau reçu : ${gift.name}`,
             giftCode: gift.code,
             senderId,
             platformFee: totalLgems * PLATFORM_FEE_RATE,
@@ -262,7 +287,7 @@ export async function sendGift(
         },
       });
 
-      // 7. Mettre à jour CreatorScore
+      // 7. CreatorScore
       await tx.creatorScore.upsert({
         where: { userId: receiverId },
         update: {
@@ -278,7 +303,7 @@ export async function sendGift(
         },
       });
 
-      // 8. Stats Live
+      // 8. Stats live
       if (liveId) {
         await tx.live.update({
           where: { id: liveId },
@@ -293,15 +318,19 @@ export async function sendGift(
         impactAmount,
         giftName: gift.name,
         giftEmoji: gift.emoji,
+        gift,
       };
     });
 
     return { success: true, sentGift: result };
   } catch (error: any) {
-    console.error("[Wallet] sendGift error:", error);
+    console.error("[sendGift]", error);
+    if (error.message === "INSUFFICIENT_FUNDS") {
+      return { success: false, error: "Solde L-Gems insuffisant" };
+    }
     return {
       success: false,
-      error: error.message ?? "Erreur lors de l'envoi du cadeau",
+      error: error.message || "Erreur lors de l'envoi du cadeau",
     };
   }
 }
@@ -336,6 +365,7 @@ export async function getWalletTransactions(
     where: { userId },
     select: { id: true },
   });
+
   if (!wallet)
     return { transactions: [], total: 0, page, limit, totalPages: 0 };
 

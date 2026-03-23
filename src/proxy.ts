@@ -75,6 +75,9 @@ export async function proxy(request: NextRequest) {
       "/events",
       "/profile",
       "/chat",
+      "/lives",    // ← nouveau : pages lives (liste + room + création)
+      "/wallet",   // ← nouveau : recharge wallet, historique
+      "/my-stats",
     ];
 
     if (protectedPaths.some((path) => pathname.startsWith(path))) {

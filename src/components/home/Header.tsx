@@ -1,3 +1,4 @@
+// src/components/home/Header.tsx
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
@@ -15,6 +16,8 @@ import {
 import UserProfileButton from "./UserProfileButton";
 import { UserSearchModal } from "@/components/chat/UserSearchModal";
 import { useUnreadMessages } from "@/hooks/use-unread-messages";
+import { WalletBadge } from "@/components/wallet/WalletBadge"; 
+import { useGiftNotifications } from "@/hooks/useGiftNotifications"; // ← NOUVEAU
 
 interface User {
   id: string;
@@ -36,11 +39,14 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ Plus de pollingInterval — écoute Realtime uniquement
-  // On passe user.id pour que le hook ignore les messages envoyés par l'utilisateur lui-même
   const { unreadCount: messagesUnreadCount } = useUnreadMessages({
     userId: user.id,
   });
+
+  // ── Notifications cadeaux reçus (toast temps réel) ──────────────────────
+  // S'abonne au canal Supabase Realtime `user:{id}` et affiche un toast
+  // à chaque cadeau reçu, même hors live. Se déconnecte au unmount.
+  useGiftNotifications(user.id); // ← NOUVEAU
 
   const navItems = [
     { icon: Home, label: "Accueil", path: "/home" },
@@ -66,7 +72,6 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
             Linkaïa
           </h1>
 
-          {/* Search bar - opens modal */}
           <div className="hidden md:block">
             <div
               className="flex items-center bg-white/90 rounded-full pl-3 pr-2 py-1.5 cursor-pointer"
@@ -85,7 +90,7 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation centrale */}
         <nav className="hidden md:flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
           {navItems.map((item) => {
             const isActive = pathname === item.path;
@@ -111,8 +116,14 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
           })}
         </nav>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-2 md:gap-4">
+        {/* Actions droite */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* ── Badge solde L-Gems ─────────────────────────────────────── */}
+          {/* Affiché uniquement sur md+ pour ne pas écraser le mobile     */}
+          <div className="hidden md:block">
+            <WalletBadge variant="compact" />
+          </div>
+
           {/* Notifications */}
           <button
             type="button"
@@ -143,12 +154,11 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
             )}
           </button>
 
-          {/* User avatar */}
+          {/* Avatar */}
           <UserProfileButton user={user} />
         </div>
       </header>
 
-      {/* Search Modal */}
       <UserSearchModal
         isOpen={showSearchModal}
         onClose={() => setShowSearchModal(false)}

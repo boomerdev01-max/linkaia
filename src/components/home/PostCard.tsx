@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import ReactionButton from "../reactions/ReactionButton";
 import CommentSection from "../comments/CommentSection";
+import { PostGiftButton } from "@/components/gifts/PostGiftButton";
 
 interface PostCardProps {
   post: {
@@ -76,7 +77,7 @@ export default function PostCard({
   const handleSave = () => {
     setIsSaved(!isSaved);
     toast.success(
-      isSaved ? "Post retiré des favoris" : "Post ajouté aux favoris"
+      isSaved ? "Post retiré des favoris" : "Post ajouté aux favoris",
     );
   };
 
@@ -168,8 +169,8 @@ export default function PostCard({
                 {post.visibility === "public"
                   ? "Public"
                   : post.visibility === "friends"
-                  ? "Amis"
-                  : "Privé"}
+                    ? "Amis"
+                    : "Privé"}
               </span>
             </div>
           </div>
@@ -230,10 +231,10 @@ export default function PostCard({
                 post.media.length === 1
                   ? "grid-cols-1"
                   : post.media.length === 2
-                  ? "grid-cols-2"
-                  : post.media.length === 3
-                  ? "grid-cols-3"
-                  : "grid-cols-2"
+                    ? "grid-cols-2"
+                    : post.media.length === 3
+                      ? "grid-cols-3"
+                      : "grid-cols-2"
               }`}
             >
               {post.media.slice(0, 4).map((media, index) => (
@@ -288,8 +289,9 @@ export default function PostCard({
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Barre d'actions */}
       <div className="flex items-center justify-between">
+        {/* Réaction */}
         <ReactionButton
           targetType="post"
           targetId={post.id}
@@ -305,6 +307,7 @@ export default function PostCard({
           onReactionChange={onPostUpdate}
         />
 
+        {/* Commenter */}
         <button
           onClick={() => setShowComments(!showComments)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -313,6 +316,14 @@ export default function PostCard({
           <span className="font-medium text-sm">Commenter</span>
         </button>
 
+        {/* Cadeau - masqué pour l'auteur du post via le composant lui-même */}
+        <PostGiftButton
+          postId={post.id}
+          authorId={post.author.id}
+          currentUserId={currentUserId}
+        />
+
+        {/* Partager */}
         <button
           onClick={handleShare}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -321,6 +332,7 @@ export default function PostCard({
           <span className="font-medium text-sm">Partager</span>
         </button>
 
+        {/* Sauvegarder */}
         <button
           onClick={handleSave}
           className={`p-2 rounded-lg transition-colors ${
