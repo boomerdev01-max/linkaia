@@ -8,7 +8,7 @@ import { getUserPrimaryRole, isUserStaff } from "@/lib/rbac";
  */
 export async function handleRBACRedirect(
   request: NextRequest,
-  supabaseUserId: string
+  supabaseUserId: string,
 ): Promise<NextResponse | null> {
   try {
     // Récupérer l'utilisateur avec ses rôles
@@ -44,7 +44,7 @@ export async function handleRBACRedirect(
       // Si l'utilisateur doit changer son mot de passe
       if (user.mustChangePassword && pathname !== "/change-password") {
         return NextResponse.redirect(
-          new URL("/change-password?force=true", request.url)
+          new URL("/change-password?force=true", request.url),
         );
       }
 
@@ -72,7 +72,7 @@ export async function handleRBACRedirect(
     if (!user.isProfileCompleted && !user.skipProfileSetup) {
       if (!pathname.startsWith("/onboarding/profile")) {
         return NextResponse.redirect(
-          new URL("/onboarding/profile/welcome", request.url)
+          new URL("/onboarding/profile/welcome", request.url),
         );
       }
     }
@@ -86,7 +86,7 @@ export async function handleRBACRedirect(
     ) {
       if (!pathname.startsWith("/onboarding/preferences")) {
         return NextResponse.redirect(
-          new URL("/onboarding/preferences/welcome", request.url)
+          new URL("/onboarding/preferences/welcome", request.url),
         );
       }
     }
@@ -119,6 +119,9 @@ export function isProtectedPath(pathname: string): boolean {
     "/videos",
     "/events",
     "/notifications",
+    "/lives", // ← nouveau : pages lives (liste + room + création)
+    "/wallet", // ← nouveau : recharge wallet, historique
+    "/my-stats",
   ];
 
   return protectedPaths.some((path) => pathname.startsWith(path));
@@ -128,7 +131,13 @@ export function isProtectedPath(pathname: string): boolean {
  * Vérifie si un chemin est une page d'authentification
  */
 export function isAuthPath(pathname: string): boolean {
-  const authPaths = ["/signin", "/signup", "/verify-email", "/forgot-password", "/reset-password"];
+  const authPaths = [
+    "/signin",
+    "/signup",
+    "/verify-email",
+    "/forgot-password",
+    "/reset-password",
+  ];
   return authPaths.includes(pathname);
 }
 
@@ -137,7 +146,7 @@ export function isAuthPath(pathname: string): boolean {
  */
 export async function canAccessAdminRoute(
   userId: string,
-  pathname: string
+  pathname: string,
 ): Promise<boolean> {
   try {
     // Récupérer les menus de l'utilisateur
@@ -146,7 +155,7 @@ export async function canAccessAdminRoute(
 
     // Extraire tous les chemins accessibles (parents et enfants)
     const accessiblePaths = new Set<string>();
-    
+
     menus.forEach((menu) => {
       if (menu.path) accessiblePaths.add(menu.path);
       menu.children?.forEach((child: any) => {
@@ -156,7 +165,9 @@ export async function canAccessAdminRoute(
 
     // Vérifier si le chemin demandé est accessible
     // On vérifie aussi les chemins parents (ex: /admin/users/123 → /admin/users)
-    return Array.from(accessiblePaths).some((path) => pathname.startsWith(path));
+    return Array.from(accessiblePaths).some((path) =>
+      pathname.startsWith(path),
+    );
   } catch (error) {
     console.error("Erreur canAccessAdminRoute:", error);
     return false;

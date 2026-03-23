@@ -18,8 +18,11 @@ import {
   Globe,
   BookOpen,
   Briefcase,
+  Radio, // ← Lives
+  Wallet, // ← Wallet
 } from "lucide-react";
 import { toast } from "sonner";
+import { WalletBadge } from "@/components/wallet/WalletBadge";
 
 interface User {
   id: string;
@@ -41,6 +44,7 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
     { icon: Home, label: "Accueil", path: "/home", active: true },
     { icon: Users, label: "Rencontres", path: "/suggestions" },
     { icon: Heart, label: "Favoris", path: "/favorites" },
+    { icon: Radio, label: "Lives", path: "/lives" }, // ← NOUVEAU
     { icon: PlayCircle, label: "Vidéos", path: "/videos" },
     { icon: Calendar, label: "Événements", path: "/events" },
     { icon: Store, label: "Marketplace", path: "/marketplace" },
@@ -60,7 +64,7 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
   ];
 
   return (
-    <aside className="h-full w-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto hover-scrollbar">
+    <aside className="h-full w-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto hover-scrollbar flex flex-col">
       {/* Profil utilisateur */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
         <Link
@@ -104,9 +108,7 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
           {menuItems.map((item, index) => (
             <button
               key={index}
-              onClick={() => {
-                router.push(item.path);
-              }}
+              onClick={() => router.push(item.path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 item.active
                   ? "bg-[#0F4C5C]/10 text-[#0F4C5C] dark:bg-[#0F4C5C]/20 dark:text-[#B88A4F]"
@@ -115,6 +117,13 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
             >
               <item.icon className="w-5 h-5" />
               <span className="text-sm font-medium">{item.label}</span>
+              {/* Badge LIVE animé sur l'entrée Lives */}
+              {item.path === "/lives" && (
+                <span className="ml-auto flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  LIVE
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -143,6 +152,14 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
         </div>
       </div>
 
+      {/* ── WALLET WIDGET ─────────────────────────────────────────────────── */}
+      <div className="px-4 pb-3 border-t border-gray-200 dark:border-gray-800 pt-4">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+          Mon Wallet
+        </h3>
+        <WalletBadge variant="full" />
+      </div>
+
       {/* Inviter des amis */}
       <div className="p-4 mt-auto border-t border-gray-200 dark:border-gray-800">
         <div className="bg-linear-to-r from-[#0F4C5C] to-[#B88A4F] rounded-xl p-4 text-white">
@@ -164,30 +181,24 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
-
         .hover-scrollbar::-webkit-scrollbar {
           width: 0;
           height: 0;
         }
-
         .hover-scrollbar:hover {
           scrollbar-width: thin;
           scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
         }
-
         .hover-scrollbar:hover::-webkit-scrollbar {
           width: 6px;
         }
-
         .hover-scrollbar:hover::-webkit-scrollbar-track {
           background: transparent;
         }
-
         .hover-scrollbar:hover::-webkit-scrollbar-thumb {
           background-color: rgba(156, 163, 175, 0.5);
           border-radius: 3px;
         }
-
         .hover-scrollbar:hover::-webkit-scrollbar-thumb:hover {
           background-color: rgba(156, 163, 175, 0.7);
         }
