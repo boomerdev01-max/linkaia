@@ -5,6 +5,7 @@ import Header from "./Header";
 import LeftSidebar from "./LeftSidebar";
 import RightSidebar from "./RightSidebar";
 import MainFeed from "./MainFeed";
+import { LiaButton } from "@/components/lia/LiaButton"; // ← AJOUT
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -25,7 +26,6 @@ interface HomeClientProps {
 export default function HomeClient({ user }: HomeClientProps) {
   const router = useRouter();
 
-  // Redirection si pas d'utilisateur
   useEffect(() => {
     if (!user?.id) {
       router.push("/signin");
@@ -36,9 +36,8 @@ export default function HomeClient({ user }: HomeClientProps) {
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <Header user={user} />
 
-      {/* Layout avec widths fixes */}
       <div className="flex pt-16 justify-center">
-        {/* LeftSidebar - 282px fixe */}
+        {/* LeftSidebar */}
         <div
           className="hidden md:block fixed left-0 top-16 bottom-0"
           style={{ width: "282px" }}
@@ -46,20 +45,17 @@ export default function HomeClient({ user }: HomeClientProps) {
           <LeftSidebar user={user} />
         </div>
 
-        {/* MainFeed - Largeur ajustable avec hauteur contrôlée */}
+        {/* MainFeed */}
         <main
           className="w-full md:ml-70.5 lg:mr-73 min-h-[calc(100vh-80px)]"
-          style={{
-            maxWidth: "555px",
-            width: "90%", 
-          }}
+          style={{ maxWidth: "555px", width: "90%" }}
         >
           <div className="p-4 lg:p-6 h-full">
             <MainFeed user={user} />
           </div>
         </main>
 
-        {/* RightSidebar - 292px fixe */}
+        {/* RightSidebar */}
         <div
           className="hidden lg:block fixed right-0 top-16 bottom-0"
           style={{ width: "292px" }}
@@ -67,6 +63,9 @@ export default function HomeClient({ user }: HomeClientProps) {
           <RightSidebar user={user} />
         </div>
       </div>
+
+      {/* ✨ LIA — Assistante IA flottante */}
+      <LiaButton />
     </div>
   );
 }
