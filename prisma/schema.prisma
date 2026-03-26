@@ -131,6 +131,7 @@ model User {
   reportsGiven      Report[] @relation("ReportsGiven")
   reportsReceived   Report[] @relation("ReportsReceived")
   reportsReviewed   Report[] @relation("ReportsReviewed")
+  liaConversation   LiaConversation?
 
   // === WALLET & MONÉTISATION ===
   wallet            Wallet?
@@ -1881,6 +1882,37 @@ model UserBadge {
   @@unique([userId, badgeId])
   @@index([userId])
   @@map("user_badges")
+}
+
+// ============================================================
+// LIA — ASSISTANT IA DE LINKAÏA
+// ============================================================
+
+model LiaConversation {
+  id        String       @id @default(uuid())
+  userId    String       @unique @map("user_id")   // 1 seule conversation par user
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages  LiaMessage[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("lia_conversations")
+}
+
+model LiaMessage {
+  id             String          @id @default(uuid())
+  conversationId String          @map("conversation_id")
+  conversation   LiaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role    String  // "user" | "assistant"
+  content String  @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("lia_messages")
 }
 
 // ============================================================
