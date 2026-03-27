@@ -1,15 +1,27 @@
 // components/chat/MessageBubble.tsx
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
-import { cn } from '@/lib/utils';
-import { 
-  Download, Play, Pause, File, X, ZoomIn, 
-  MoreVertical, Smile, Reply, Pin, Pencil, Trash2, Forward,
-  Check, CheckCheck
-} from 'lucide-react';
-import type { Message, MessageMedia } from '@/types/chat';
-import { MESSAGE_REACTIONS } from '@/types/chat';
+import { useState, useRef } from "react";
+import { cn } from "@/lib/utils";
+import {
+  Download,
+  Play,
+  Pause,
+  File,
+  X,
+  ZoomIn,
+  MoreVertical,
+  Smile,
+  Reply,
+  Pin,
+  Pencil,
+  Trash2,
+  Forward,
+  Check,
+  CheckCheck,
+} from "lucide-react";
+import type { Message, MessageMedia } from "@/types/chat";
+import { MESSAGE_REACTIONS } from "@/types/chat";
 
 interface MessageBubbleProps {
   message: Message;
@@ -50,9 +62,9 @@ export function MessageBubble({
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -65,7 +77,7 @@ export function MessageBubble({
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const toggleAudio = (url: string, duration?: number | null) => {
@@ -95,7 +107,7 @@ export function MessageBubble({
 
   const renderMedia = (media: MessageMedia) => {
     switch (media.type) {
-      case 'IMAGE':
+      case "IMAGE":
         return (
           <div
             key={media.id}
@@ -109,7 +121,7 @@ export function MessageBubble({
               src={media.url || "/placeholder.svg"}
               alt={media.filename}
               className="max-w-xs rounded-lg object-cover"
-              style={{ maxHeight: '300px' }}
+              style={{ maxHeight: "300px" }}
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
               <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2">
@@ -119,18 +131,18 @@ export function MessageBubble({
           </div>
         );
 
-      case 'VIDEO':
+      case "VIDEO":
         return (
           <video
             key={media.id}
             src={media.url}
             controls
             className="max-w-xs rounded-lg"
-            style={{ maxHeight: '300px' }}
+            style={{ maxHeight: "300px" }}
           />
         );
 
-      case 'VOICE':
+      case "VOICE":
         return (
           <div key={media.id} className="flex items-center gap-3 min-w-50">
             <audio ref={audioRef} />
@@ -138,8 +150,10 @@ export function MessageBubble({
               type="button"
               onClick={() => toggleAudio(media.url, media.duration)}
               className={cn(
-                'w-8 h-8 rounded-full flex items-center justify-center',
-                isOwnMessage ? 'bg-white/20 hover:bg-white/30' : 'bg-[#0F4C5C]/10 hover:bg-[#0F4C5C]/20'
+                "w-8 h-8 rounded-full flex items-center justify-center",
+                isOwnMessage
+                  ? "bg-white/20 hover:bg-white/30"
+                  : "bg-[#0F4C5C]/10 hover:bg-[#0F4C5C]/20",
               )}
             >
               {isPlayingAudio ? (
@@ -157,10 +171,14 @@ export function MessageBubble({
                   <div
                     key={i}
                     className={cn(
-                      'flex-1 rounded-full transition-all',
+                      "flex-1 rounded-full transition-all",
                       isOwnMessage
-                        ? isPlayed ? 'bg-white' : 'bg-white/40'
-                        : isPlayed ? 'bg-[#0F4C5C]' : 'bg-[#0F4C5C]/40'
+                        ? isPlayed
+                          ? "bg-white"
+                          : "bg-white/40"
+                        : isPlayed
+                          ? "bg-[#0F4C5C]"
+                          : "bg-[#0F4C5C]/40",
                     )}
                     style={{ height: `${height}%` }}
                   />
@@ -174,30 +192,44 @@ export function MessageBubble({
           </div>
         );
 
-      case 'DOCUMENT':
+      case "DOCUMENT":
         return (
           <a
             key={media.id}
             href={media.url}
             download={media.filename}
             className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 max-w-xs',
-              isOwnMessage ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-200 hover:bg-gray-300'
+              "flex items-center gap-3 rounded-lg px-3 py-2 max-w-xs",
+              isOwnMessage
+                ? "bg-white/10 hover:bg-white/20"
+                : "bg-gray-200 hover:bg-gray-300",
             )}
           >
-            <div className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center',
-              isOwnMessage ? 'bg-white/20' : 'bg-[#B88A4F]'
-            )}>
+            <div
+              className={cn(
+                "w-10 h-10 rounded-lg flex items-center justify-center",
+                isOwnMessage ? "bg-white/20" : "bg-[#B88A4F]",
+              )}
+            >
               <File className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{media.filename}</p>
-              <p className={cn('text-xs', isOwnMessage ? 'text-white/70' : 'text-gray-500')}>
+              <p
+                className={cn(
+                  "text-xs",
+                  isOwnMessage ? "text-white/70" : "text-gray-500",
+                )}
+              >
                 {formatFileSize(media.size)}
               </p>
             </div>
-            <Download className={cn('w-4 h-4', isOwnMessage ? 'text-white/70' : 'text-gray-400')} />
+            <Download
+              className={cn(
+                "w-4 h-4",
+                isOwnMessage ? "text-white/70" : "text-gray-400",
+              )}
+            />
           </a>
         );
 
@@ -208,14 +240,21 @@ export function MessageBubble({
 
   if (message.isDeleted) {
     return (
-      <div className={cn('flex mb-3', isOwnMessage ? 'justify-end' : 'justify-start')}>
-        <div className={cn(
-          'rounded-2xl px-4 py-2 italic text-sm',
-          isOwnMessage
-            ? 'bg-[#0F4C5C]/50 text-white/70'
-            : 'bg-gray-100 text-gray-500'
-        )}>
-          Message supprime
+      <div
+        className={cn(
+          "flex mb-3",
+          isOwnMessage ? "justify-end" : "justify-start",
+        )}
+      >
+        <div
+          className={cn(
+            "rounded-2xl px-4 py-2 italic text-sm",
+            isOwnMessage
+              ? "bg-[#0F4C5C]/50 text-white/70"
+              : "bg-gray-100 text-gray-500",
+          )}
+        >
+          Message supprimé
         </div>
       </div>
     );
@@ -224,7 +263,10 @@ export function MessageBubble({
   return (
     <>
       <div
-        className={cn('flex mb-3 group', isOwnMessage ? 'justify-end' : 'justify-start')}
+        className={cn(
+          "flex mb-3 group",
+          isOwnMessage ? "justify-end" : "justify-start",
+        )}
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => {
           setShowActions(false);
@@ -257,13 +299,16 @@ export function MessageBubble({
               >
                 <MoreVertical className="w-4 h-4 text-gray-600" />
               </button>
-              
+
               {showMoreMenu && (
                 <div className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border py-1 z-10">
                   {canEdit() && (
                     <button
                       type="button"
-                      onClick={() => { onEdit(); setShowMoreMenu(false); }}
+                      onClick={() => {
+                        onEdit();
+                        setShowMoreMenu(false);
+                      }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <Pencil className="w-4 h-4" />
@@ -272,15 +317,21 @@ export function MessageBubble({
                   )}
                   <button
                     type="button"
-                    onClick={() => { onPin(); setShowMoreMenu(false); }}
+                    onClick={() => {
+                      onPin();
+                      setShowMoreMenu(false);
+                    }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     <Pin className="w-4 h-4" />
-                    {message.isPinned ? 'Desepingler' : 'Epingler'}
+                    {message.isPinned ? "Desepingler" : "Epingler"}
                   </button>
                   <button
                     type="button"
-                    onClick={() => { onDelete(); setShowMoreMenu(false); }}
+                    onClick={() => {
+                      onDelete();
+                      setShowMoreMenu(false);
+                    }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -292,7 +343,12 @@ export function MessageBubble({
           </div>
         )}
 
-        <div className={cn('max-w-[70%] flex flex-col', isOwnMessage ? 'items-end' : 'items-start')}>
+        <div
+          className={cn(
+            "max-w-[70%] flex flex-col",
+            isOwnMessage ? "items-end" : "items-start",
+          )}
+        >
           {/* Sender name */}
           {showSender && !isOwnMessage && (
             <span className="text-xs text-gray-500 mb-1 px-3">
@@ -311,23 +367,25 @@ export function MessageBubble({
           {/* Message bubble */}
           <div
             className={cn(
-              'rounded-2xl px-4 py-2 relative',
+              "rounded-2xl px-4 py-2 relative",
               isOwnMessage
-                ? 'bg-[#0F4C5C] text-white rounded-br-sm'
-                : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                ? "bg-[#0F4C5C] text-white rounded-br-sm"
+                : "bg-gray-100 text-gray-900 rounded-bl-sm",
             )}
           >
             {/* Reply preview */}
             {message.replyTo && (
-              <div className={cn(
-                'mb-2 pb-2 border-b text-sm opacity-70',
-                isOwnMessage ? 'border-white/20' : 'border-gray-300'
-              )}>
+              <div
+                className={cn(
+                  "mb-2 pb-2 border-b text-sm opacity-70",
+                  isOwnMessage ? "border-white/20" : "border-gray-300",
+                )}
+              >
                 <p className="font-medium text-xs">
                   {message.replyTo.sender.prenom}
                 </p>
                 <p className="truncate text-xs">
-                  {message.replyTo.content || '[Media]'}
+                  {message.replyTo.content || "[Media]"}
                 </p>
               </div>
             )}
@@ -347,37 +405,47 @@ export function MessageBubble({
             )}
 
             {/* Time & Status */}
-            <div className={cn(
-              'text-xs mt-1 flex items-center gap-2',
-              isOwnMessage ? 'text-white/70 justify-end' : 'text-gray-500'
-            )}>
+            <div
+              className={cn(
+                "text-xs mt-1 flex items-center gap-2",
+                isOwnMessage ? "text-white/70 justify-end" : "text-gray-500",
+              )}
+            >
               <span>{formatTime(message.createdAt)}</span>
               {message.isEdited && <span>(modifie)</span>}
-              {isOwnMessage && (
-                message.readBy && message.readBy.length > 0
-                  ? <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
-                  : <Check className="w-3.5 h-3.5" />
-              )}
+              {isOwnMessage &&
+                (message.readBy && message.readBy.length > 0 ? (
+                  <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                ))}
             </div>
 
             {/* Reactions */}
             {message.reactions.length > 0 && (
-              <div className={cn(
-                'absolute -bottom-4 flex gap-0.5',
-                isOwnMessage ? 'right-2' : 'left-2'
-              )}>
+              <div
+                className={cn(
+                  "absolute -bottom-4 flex gap-0.5",
+                  isOwnMessage ? "right-2" : "left-2",
+                )}
+              >
                 {Object.entries(
-                  message.reactions.reduce((acc, r) => {
-                    acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>)
+                  message.reactions.reduce(
+                    (acc, r) => {
+                      acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                      return acc;
+                    },
+                    {} as Record<string, number>,
+                  ),
                 ).map(([emoji, count]) => (
                   <span
                     key={emoji}
                     className="bg-white shadow rounded-full px-1.5 py-0.5 text-xs flex items-center gap-0.5"
                   >
                     {emoji}
-                    {count > 1 && <span className="text-gray-500">{count}</span>}
+                    {count > 1 && (
+                      <span className="text-gray-500">{count}</span>
+                    )}
                   </span>
                 ))}
               </div>
@@ -407,10 +475,12 @@ export function MessageBubble({
 
         {/* Reaction picker */}
         {showReactions && (
-          <div className={cn(
-            'absolute mt-10 bg-white rounded-full shadow-lg px-2 py-1 flex gap-1 z-20',
-            isOwnMessage ? 'right-0' : 'left-0'
-          )}>
+          <div
+            className={cn(
+              "absolute mt-10 bg-white rounded-full shadow-lg px-2 py-1 flex gap-1 z-20",
+              isOwnMessage ? "right-0" : "left-0",
+            )}
+          >
             {MESSAGE_REACTIONS.map(({ emoji }) => (
               <button
                 key={emoji}

@@ -12,8 +12,6 @@ import type { ConversationListItem } from "@/types/chat";
 
 import Header from "@/components/home/Header";
 
-// ✅ Plus d'import useUnreadMessages ici — le Header s'en charge déjà
-
 interface ChatClientProps {
   currentUser: {
     id: string;

@@ -45,9 +45,9 @@ export interface Message {
   reactions: MessageReaction[];
   replyTo?: Message | null;
   readBy?: { id: string; readAt: string }[];
-  // ✅ Champs pour l'optimistic UI
-  sendStatus?: "sending" | "sent" | "error"; // undefined = message reçu
-  tempId?: string; // ID temporaire côté client avant confirmation serveur
+  // Champs pour l'optimistic UI
+  sendStatus?: "sending" | "sent" | "error";
+  tempId?: string;
 }
 
 export interface ConversationParticipant {
@@ -91,7 +91,99 @@ export interface ConversationListItem {
   }[];
 }
 
-// Realtime payload types
+// ─── CALL TYPES ──────────────────────────────────────────────────────────────
+
+/** Types d'appels supportés */
+export type CallType = "audio" | "video";
+
+/** États du cycle de vie d'un appel */
+export type CallStatus =
+  | "idle" // Aucun appel en cours
+  | "calling" // Appelant : sonnerie envoyée, attente réponse
+  | "ringing" // Appelé : popup "appel entrant" affichée
+  | "connected" // Appel en cours (les deux participants sont dans la room)
+  | "ended"; // Appel terminé (raccroché, refusé, timeout)
+
+/** Raisons de fin d'appel */
+export type CallEndReason =
+  | "hangup" // Raccroché manuellement
+  | "rejected" // Refusé par l'appelé
+  | "timeout" // Pas de réponse après 30s
+  | "error"; // Erreur technique
+
+/** Session d'appel active */
+export interface CallSession {
+  /** ID unique de la session (= roomName LiveKit) */
+  sessionId: string;
+  /** ID de la conversation associée */
+  conversationId: string;
+  /** Type d'appel */
+  type: CallType;
+  /** Statut courant */
+  status: CallStatus;
+  /** Initiateur de l'appel */
+  caller: ChatUser;
+  /** Participants invités (hors appelant) */
+  participants: ChatUser[];
+  /** Token LiveKit pour rejoindre la room (disponible après acceptation) */
+  livekitToken?: string;
+  /** URL LiveKit publique */
+  livekitUrl?: string;
+  /** Timestamp de début de sonnerie (pour timeout) */
+  startedAt: number;
+  /** Timestamp de connexion effective */
+  connectedAt?: number;
+}
+
+// ─── REALTIME CALL EVENTS ────────────────────────────────────────────────────
+
+/**
+ * Événements échangés via Supabase Realtime channel `call:{conversationId}`
+ * Tous les events incluent l'ID de session pour filtrer les messages parasites.
+ */
+
+export interface CallEventBase {
+  sessionId: string;
+  conversationId: string;
+  senderId: string;
+}
+
+/** Appelant → Tous : initiation d'un appel */
+export interface CallInitiatedEvent extends CallEventBase {
+  type: "call.initiated";
+  callType: CallType;
+  caller: ChatUser;
+  /** Participants ciblés (pour les groupes) */
+  targetUserIds: string[];
+}
+
+/** Appelé → Appelant : acceptation */
+export interface CallAnsweredEvent extends CallEventBase {
+  type: "call.answered";
+  /** Token LiveKit généré pour cet utilisateur */
+  livekitToken: string;
+  livekitUrl: string;
+}
+
+/** Appelé → Appelant : refus */
+export interface CallRejectedEvent extends CallEventBase {
+  type: "call.rejected";
+}
+
+/** N'importe qui → Tous : fin d'appel */
+export interface CallEndedEvent extends CallEventBase {
+  type: "call.ended";
+  reason: CallEndReason;
+}
+
+export type CallEvent =
+  | CallInitiatedEvent
+  | CallAnsweredEvent
+  | CallRejectedEvent
+  | CallEndedEvent;
+
+// ─── REALTIME PAYLOAD TYPES (existants) ──────────────────────────────────────
+
 export interface RealtimeMessagePayload {
   eventType: "INSERT" | "UPDATE" | "DELETE";
   new?: Message;

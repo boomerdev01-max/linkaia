@@ -20,7 +20,7 @@ interface MessageInputProps {
   currentUserId: string;
   currentUserName: string;
   currentUserPhoto?: string | null;
-  // ✅ Nouveau : séparation optimistic / envoi réel
+  // Séparation optimistic / envoi réel
   onOptimisticMessage: (message: Message) => void; // affichage immédiat
   onConfirmMessage: (tempId: string, realMessage: Message) => void; // confirmation
   onErrorMessage: (tempId: string) => void; // rollback si erreur
