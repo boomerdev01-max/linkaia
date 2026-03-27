@@ -137,7 +137,7 @@ export async function GET(request: Request) {
           avatarUrl: displayAvatar,
           type: conv.type as 'direct' | 'group',
           lastMessage: lastMsg?.isDeleted 
-            ? 'Message supprime' 
+            ? 'Message supprimé' 
             : lastMessageContent,
           lastMessageTime: lastMsg?.createdAt.toISOString() || null,
           lastMessageSenderId: lastMsg?.senderId || null,

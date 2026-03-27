@@ -6,16 +6,19 @@ import { Phone, Video, MoreVertical, ChevronLeft, Loader2 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
+import { IncomingCallModal } from "./IncomingCallModal";
+import { CallOverlay } from "./CallOverlay";
 import { useMessages } from "@/hooks/use-messages";
 import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
 import { useTypingIndicator } from "@/hooks/use-typing-indicator";
+import { useCall } from "@/hooks/use-call";
 import type { ConversationListItem, Message } from "@/types/chat";
 
 interface ConversationViewProps {
   conversation: ConversationListItem;
   currentUserId: string;
   currentUserName: string;
-  currentUserPhoto?: string | null; // ✅ ajout pour l'optimistic UI
+  currentUserPhoto?: string | null;
   onBack?: () => void;
   onOpenInfo?: () => void;
 }
@@ -34,6 +37,7 @@ export function ConversationView({
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
 
+  // ── Messages ─────────────────────────────────────────────────────────────
   const {
     messages,
     isLoading,
@@ -42,10 +46,10 @@ export function ConversationView({
     fetchMessages,
     loadMore,
     addMessage,
-    addOptimisticMessage, // ✅ nouveau
-    confirmOptimisticMessage, // ✅ nouveau
-    markMessageError, // ✅ nouveau
-    fetchSingleMessage, // ✅ nouveau
+    addOptimisticMessage,
+    confirmOptimisticMessage,
+    markMessageError,
+    fetchSingleMessage,
     updateMessage,
     removeMessage,
     updateReactions,
@@ -62,29 +66,48 @@ export function ConversationView({
     currentUserName,
   });
 
-  // ── Realtime ─────────────────────────────────────────────────────────────
-  // Callbacks stables pour éviter les re-subscribe inutiles
+  // ── Appels ──────────────────────────────────────────────────────────────
+  // On construit le currentUser à partir des props pour useCall
+  const currentUser = {
+    id: currentUserId,
+    nom: currentUserName.split(" ")[1] || currentUserName,
+    prenom: currentUserName.split(" ")[0] || "",
+    pseudo: null,
+    profilePhotoUrl: currentUserPhoto || null,
+  };
+
+  const {
+    callSession,
+    initiateCall,
+    answerCall,
+    rejectCall,
+    hangUp,
+    isIncomingCall,
+  } = useCall({
+    conversationId: conversation.id,
+    currentUser,
+    participants: conversation.participants,
+  });
+
+  // ── Realtime messages ─────────────────────────────────────────────────
   const handleNewMessage = useCallback(
     (message: Message) => {
       addMessage(message);
     },
     [addMessage],
   );
-
   const handleMessageUpdate = useCallback(
     (messageId: string, updates: Partial<Message>) => {
       updateMessage(messageId, updates);
     },
     [updateMessage],
   );
-
   const handleMessageDelete = useCallback(
     (messageId: string) => {
       removeMessage(messageId);
     },
     [removeMessage],
   );
-
   const handleReactionChange = useCallback(
     (messageId: string, reactions: Message["reactions"]) => {
       updateReactions(messageId, reactions);
@@ -92,15 +115,14 @@ export function ConversationView({
     [updateReactions],
   );
 
-  // ✅ useRealtimeMessages avec les nouveaux props requis
   useRealtimeMessages({
     conversationId: conversation.id,
-    currentUserId, // ✅ pour ignorer nos propres messages
+    currentUserId,
     onNewMessage: handleNewMessage,
     onMessageUpdate: handleMessageUpdate,
     onMessageDelete: handleMessageDelete,
     onReactionChange: handleReactionChange,
-    onFetchSingleMessage: fetchSingleMessage, // ✅ fetch ciblé au lieu de toute la liste
+    onFetchSingleMessage: fetchSingleMessage,
   });
 
   // Initial fetch
@@ -108,43 +130,36 @@ export function ConversationView({
     fetchMessages(true);
   }, [conversation.id]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom
   useEffect(() => {
     if (isNearBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isNearBottom]);
 
-  // Handle scroll for loading more and tracking position
   const handleScroll = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-
-    if (container.scrollTop < 100 && hasMore && !isLoadingMore) {
-      loadMore();
-    }
-
+    if (container.scrollTop < 100 && hasMore && !isLoadingMore) loadMore();
     const isAtBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight <
       100;
     setIsNearBottom(isAtBottom);
   }, [hasMore, isLoadingMore, loadMore]);
 
-  // ── Handlers optimistic pour MessageInput ────────────────────────────────
+  // ── Handlers optimistic ───────────────────────────────────────────────
   const handleOptimisticMessage = useCallback(
     (message: Message) => {
       addOptimisticMessage(message);
     },
     [addOptimisticMessage],
   );
-
   const handleConfirmMessage = useCallback(
     (tempId: string, realMessage: Message) => {
       confirmOptimisticMessage(tempId, realMessage);
     },
     [confirmOptimisticMessage],
   );
-
   const handleErrorMessage = useCallback(
     (tempId: string) => {
       markMessageError(tempId);
@@ -152,7 +167,6 @@ export function ConversationView({
     [markMessageError],
   );
 
-  // ── sendMessage wrappé pour stopper le typing et reset replyTo ──────────
   const handleSendMessage = useCallback(
     async (
       content: string,
@@ -163,7 +177,7 @@ export function ConversationView({
       stopTyping();
       const message = await sendMessage(content, type, media, replyToId);
       setReplyTo(null);
-      return message; // ✅ retourne le vrai Message pour que MessageInput confirme l'optimistic
+      return message;
     },
     [sendMessage, stopTyping],
   );
@@ -176,7 +190,7 @@ export function ConversationView({
     [editMessage],
   );
 
-  // Display info
+  // ── Display info ──────────────────────────────────────────────────────
   const otherParticipant =
     conversation.type === "direct"
       ? conversation.participants.find((p) => p.userId !== currentUserId)?.user
@@ -195,9 +209,15 @@ export function ConversationView({
 
   const isGroup = conversation.type === "group";
 
+  // ── Boutons d'appel désactivés si un appel est déjà en cours ─────────
+  const callActive =
+    callSession !== null &&
+    callSession.status !== "ended" &&
+    callSession.status !== "idle";
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header — identique à l'original */}
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white">
         {onBack && (
           <button
@@ -235,22 +255,51 @@ export function ConversationView({
                 {conversation.participants.length} participants
               </p>
             )}
+            {/* Indicateur "appel en cours" dans le header */}
+            {callActive && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                {callSession?.status === "calling"
+                  ? "Appel en cours…"
+                  : callSession?.status === "connected"
+                    ? "En communication"
+                    : ""}
+              </p>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Bouton appel audio */}
           <button
             type="button"
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
+            onClick={() => initiateCall("audio")}
+            disabled={callActive}
+            title="Appel audio"
+            className={
+              callActive
+                ? "p-2 rounded-full text-gray-300 cursor-not-allowed"
+                : "p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            }
           >
             <Phone className="w-5 h-5" />
           </button>
+
+          {/* Bouton appel vidéo */}
           <button
             type="button"
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
+            onClick={() => initiateCall("video")}
+            disabled={callActive}
+            title="Appel vidéo"
+            className={
+              callActive
+                ? "p-2 rounded-full text-gray-300 cursor-not-allowed"
+                : "p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            }
           >
             <Video className="w-5 h-5" />
           </button>
+
           <button
             type="button"
             onClick={onOpenInfo}
@@ -291,7 +340,7 @@ export function ConversationView({
 
             return (
               <MessageBubble
-                key={message.tempId ?? message.id} // ✅ clé stable pour les optimistic
+                key={message.tempId ?? message.id}
                 message={message}
                 isOwnMessage={message.sender.id === currentUserId}
                 showSender={showSender}
@@ -313,7 +362,7 @@ export function ConversationView({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ✅ MessageInput avec les nouveaux callbacks optimistic */}
+      {/* MessageInput */}
       <MessageInput
         conversationId={conversation.id}
         currentUserId={currentUserId}
@@ -327,6 +376,26 @@ export function ConversationView({
         onCancelReply={() => setReplyTo(null)}
         onTyping={startTyping}
       />
+
+      {/* ── Appel entrant (popup par-dessus tout) ── */}
+      {isIncomingCall && callSession && (
+        <IncomingCallModal
+          callSession={callSession}
+          onAnswer={answerCall}
+          onReject={rejectCall}
+        />
+      )}
+
+      {/* ── Appel en cours (overlay plein écran) ── */}
+      {callSession &&
+        (callSession.status === "calling" ||
+          callSession.status === "connected") && (
+          <CallOverlay
+            callSession={callSession}
+            currentUserId={currentUserId}
+            onHangUp={() => hangUp("hangup")}
+          />
+        )}
     </div>
   );
 }

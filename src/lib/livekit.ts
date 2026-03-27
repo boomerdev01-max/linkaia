@@ -1,13 +1,11 @@
 // src/lib/livekit.ts
-// Génération de tokens LiveKit pour host et viewers
-// Compatible avec LiveKit Cloud ET LiveKit local (docker)
+// Génération de tokens LiveKit pour host/viewer (Lives) et pour les appels audio/vidéo
 //
 // Variables d'environnement requises :
 //   LIVEKIT_URL=ws://localhost:7880          (local) ou wss://xxx.livekit.cloud
 //   LIVEKIT_API_KEY=devkey
 //   LIVEKIT_API_SECRET=secret
-//
-// npm install livekit-server-sdk
+//   NEXT_PUBLIC_LIVEKIT_URL=wss://xxx.livekit.cloud
 
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 
@@ -25,6 +23,8 @@ function getLiveKitConfig() {
   return { url, apiKey, apiSecret };
 }
 
+// ─── TOKEN LIVES ──────────────────────────────────────────────────────────────
+
 export interface LiveKitTokenOptions {
   roomName: string;
   userId: string;
@@ -35,7 +35,7 @@ export interface LiveKitTokenOptions {
 }
 
 /**
- * Génère un token LiveKit signé
+ * Génère un token LiveKit signé pour les Lives/Webinaires
  * - host : canPublish + canSubscribe + canPublishData + roomAdmin
  * - viewer : canSubscribe uniquement (+ canPublishData pour le chat)
  */
@@ -59,15 +59,61 @@ export async function generateLiveKitToken({
     room: roomName,
     canPublish: role === "host",
     canSubscribe: true,
-    canPublishData: true, // autorise les data channels (chat, events)
+    canPublishData: true,
     roomAdmin: role === "host",
   });
 
   return await at.toJwt();
 }
 
+// ─── TOKEN APPELS AUDIO/VIDÉO ─────────────────────────────────────────────────
+
+export interface CallTokenOptions {
+  roomName: string;
+  userId: string;
+  userName: string;
+  /** TTL en secondes (défaut: 2h — suffisant pour un appel) */
+  ttl?: number;
+}
+
 /**
- * Termine une room LiveKit côté serveur (quand le host clôture le live)
+ * Génère un token LiveKit pour un appel audio/vidéo.
+ * Les deux participants (appelant et appelé) peuvent publier et souscrire :
+ * c'est un appel bidirectionnel, pas un broadcast.
+ */
+export async function generateCallToken({
+  roomName,
+  userId,
+  userName,
+  ttl = 2 * 60 * 60, // 2 heures
+}: CallTokenOptions): Promise<string> {
+  const { apiKey, apiSecret } = getLiveKitConfig();
+
+  const at = new AccessToken(apiKey, apiSecret, {
+    identity: userId,
+    name: userName,
+    ttl,
+  });
+
+  at.addGrant({
+    roomJoin: true,
+    room: roomName,
+    // Les deux publient (micro + caméra selon le type d'appel)
+    canPublish: true,
+    canSubscribe: true,
+    canPublishData: true,
+    // Pas de roomAdmin pour les appels — pas besoin de gérer la room
+    roomAdmin: false,
+  });
+
+  return await at.toJwt();
+}
+
+// ─── ROOM MANAGEMENT ─────────────────────────────────────────────────────────
+
+/**
+ * Termine une room LiveKit côté serveur.
+ * Utilisé pour clôturer un live ou forcer la fin d'un appel.
  */
 export async function deleteRoom(roomName: string): Promise<void> {
   const { url, apiKey, apiSecret } = getLiveKitConfig();
