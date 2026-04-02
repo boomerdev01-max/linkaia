@@ -1,64 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Lock, CircleCheck, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
-const testimonials = [
-  {
-    quote:
-      "L'authentification la plus rapide que j'ai jamais utilisée. Sécurisé et élégant !",
-    author: "@alex_cto",
-  },
-  {
-    quote:
-      "Connexion instantanée avec Google. Plus besoin de se souvenir de mots de passe complexes.",
-    author: "@emma_product",
-  },
-];
-
-export default function SigninPage() {
+export default function SigninForm() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [focused, setFocused] = useState<Record<string, boolean>>({});
 
-  // Auto-rotate testimonials
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const isFloating = (field: string) =>
+    focused[field] || formData[field as keyof typeof formData] !== "";
 
   const handleGoogleSignin = async () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
       });
-
-      if (error) {
-        toast.error(error.message);
-      }
-    } catch (error) {
+      if (error) toast.error(error.message);
+    } catch {
       toast.error("Erreur lors de la connexion avec Google");
     } finally {
       setLoading(false);
@@ -70,7 +40,6 @@ export default function SigninPage() {
     setErrors({});
     setLoading(true);
 
-    // Validation
     const newErrors: Record<string, string> = {};
     if (!formData.email) newErrors.email = "L'email est requis";
     if (!formData.password) newErrors.password = "Le mot de passe est requis";
@@ -87,7 +56,6 @@ export default function SigninPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-
       const data = await response.json();
 
       if (!response.ok) {
@@ -96,14 +64,13 @@ export default function SigninPage() {
           router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
           return;
         }
-
         toast.error(data.error || "Erreur lors de la connexion");
         return;
       }
 
       toast.success("Connexion réussie !");
       router.push("/home");
-    } catch (error) {
+    } catch {
       toast.error("Une erreur est survenue");
     } finally {
       setLoading(false);
@@ -111,172 +78,352 @@ export default function SigninPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-pink-500/30">
-      {/* Left Side - Form */}
-      <div className="relative flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16 xl:px-24 overflow-hidden">
-        {/* Ambient Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-linear-to-br from-pink-500/10 to-purple-500/10 blur-[100px]" />
-          <div className="absolute top-[60%] -right-[10%] w-[50%] h-[50%] rounded-full bg-linear-to-br from-orange-500/10 to-yellow-500/10 blur-[100px]" />
+    <div
+      className="relative min-h-screen w-full overflow-hidden"
+      style={{
+        backgroundImage: "url('/images/no-blur.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* ── TOP-LEFT: Logo + tagline (hidden on mobile) ── */}
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-10 z-20 max-w-[220px] hidden sm:block">
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="w-6 h-6 rounded-full shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #60b8f5 0%, #1a6fc4 100%)",
+              boxShadow: "0 2px 8px rgba(59,130,246,0.5)",
+            }}
+          />
+          <span
+            className="text-xs font-bold tracking-wide"
+            style={{ color: "#0a2540" }}
+          >
+            {process.env.NEXT_PUBLIC_APP_NAME || "Linkaïa"}
+          </span>
         </div>
 
-        <div className="mx-auto w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <div className="mb-10 text-center lg:text-left">
-            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              Bon <span className="text-transparent bg-clip-text bg-linear-to-rpink-500 to-orange-400">retour !</span>
-            </h1>
-            <p className="mt-3 text-base text-gray-500 dark:text-gray-400 font-medium">
-              Connectez-vous à votre compte {process.env.NEXT_PUBLIC_APP_NAME || "Linkaïa"}.
-            </p>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full rounded-full h-14 text-base font-medium transition-all hover:bg-gray-50 dark:hover:bg-zinc-900 border-2 border-gray-200 dark:border-zinc-800 hover:border-gray-300 shadow-sm hover:scale-[1.02] active:scale-95"
-            onClick={handleGoogleSignin}
-            disabled={loading}
+        {/* Tagline : Connectez-vous au monde qui vous entoure*/}
+        <p
+          className="text-[22px] font-semibold leading-snug"
+          style={{ color: "#0a2540" }}
+        >
+          Connectez-vous au monde qui vous entoure
+        </p>
+        <p
+          className="text-[16px] leading-snug mt-0.5 font-medium"
+          style={{ color: "#1e4a6e" }}
+        >
+          Découvrez, échangez, et créez des liens avec{" "}
+          <span
+            style={{
+              background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              fontWeight: 700,
+            }}
           >
-            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-            </svg>
-            Continuer avec Google
-          </Button>
+            qui vous voulez.
+          </span>
+        </p>
+      </div>
 
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-200 dark:border-zinc-800" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-zinc-950 px-4 text-gray-400 font-semibold tracking-wider">
-                ou avec votre email
-              </span>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5 group">
-              <Label htmlFor="email" className={`text-sm font-semibold transition-colors ml-1 ${errors.email ? "text-red-500" : "text-gray-700 dark:text-gray-300 group-focus-within:text-pink-500"}`}>
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="vous@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`h-12 rounded-2xl bg-gray-50/50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 px-4 transition-all focus:bg-white dark:focus:bg-zinc-950 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 ${errors.email ? "border-red-500 ring-red-500/20 focus:border-red-500" : ""}`}
-                disabled={loading}
-              />
-              {errors.email && <p className="text-xs text-red-500 ml-1 font-medium animate-in fade-in slide-in-from-top-1">{errors.email}</p>}
-            </div>
-
-            <div className="space-y-1.5 group">
-              <div className="flex items-center justify-between ml-1">
-                <Label htmlFor="password" className={`text-sm font-semibold transition-colors ${errors.password ? "text-red-500" : "text-gray-700 dark:text-gray-300 group-focus-within:text-pink-500"}`}>
-                  Mot de passe
-                </Label>
-                <Link href="/forgot-password" className="text-sm font-medium text-pink-500 hover:text-pink-600 transition-colors hover:underline underline-offset-4">
-                  Mot de passe oublié ?
-                </Link>
-              </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`h-12 rounded-2xl bg-gray-50/50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 px-4 pr-12 transition-all focus:bg-white dark:focus:bg-zinc-950 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 ${errors.password ? "border-red-500 ring-red-500/20 focus:border-red-500" : ""}`}
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-red-500 ml-1 font-medium animate-in fade-in slide-in-from-top-1">{errors.password}</p>}
-            </div>
-
-            <Button 
-              type="submit" 
-              className="w-full mt-2 rounded-full h-14 text-lg font-bold bg-linear-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white shadow-xl shadow-pink-500/25 transition-all hover:scale-[1.02] active:scale-95" 
-              disabled={loading}
-            >
-              {loading ? "Connexion en cours..." : "Se connecter"}
-            </Button>
-          </form>
-
-          <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">
-            Vous n'avez pas encore de compte ?{" "}
-            <Link href="/signup" className="font-bold text-pink-500 hover:text-pink-600 transition-colors hover:underline underline-offset-4">
-              Inscrivez-vous ici
-            </Link>
-          </p>
+      {/* ── Mobile: Simple logo without tagline ── */}
+      <div className="absolute top-6 left-6 z-20 sm:hidden">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-6 h-6 rounded-full shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #60b8f5 0%, #1a6fc4 100%)",
+              boxShadow: "0 2px 8px rgba(59,130,246,0.5)",
+            }}
+          />
+          <span
+            className="text-xs font-bold tracking-wide"
+            style={{ color: "#0a2540" }}
+          >
+            {process.env.NEXT_PUBLIC_APP_NAME || "Linkaïa"}
+          </span>
         </div>
       </div>
 
-      {/* Right Side - Testimonials (Badoo/Bumble Style) */}
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-16 overflow-hidden bg-linear-to-br from-purple-500 via-pink-400 to-rose-400">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 bg-black/5 mix-blend-overlay"></div>
-        <div className="absolute -top-20 -right-20 w-96 h-96 bg-white/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-orange-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        
-        <div className="absolute left-[15%] top-[20%] w-24 h-24 rounded-full border border-white/30 bg-white/10 backdrop-blur-md shadow-2xl animate-[bounce_4s_infinite]" />
-        <div className="absolute right-[20%] top-[30%] w-16 h-16 rounded-full border border-white/20 bg-white/5 backdrop-blur-md shadow-2xl animate-[bounce_5s_infinite_1s]">
-          <div className="w-full h-full flex items-center justify-center text-white/50">
-            <Lock className="w-6 h-6" />
-          </div>
-        </div>
-        <div className="absolute left-[25%] bottom-[25%] w-32 h-32 rounded-full border border-white/20 bg-white/10 backdrop-blur-md shadow-2xl animate-[bounce_6s_infinite_0.5s]" />
-        
-        <div className="relative z-10 w-full max-w-lg">
-          {/* Glassmorphism Testimonial Card */}
-          <div className="rounded-[2.5rem] bg-white/10 p-12 backdrop-blur-xl border border-white/20 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] animate-in fade-in slide-in-from-right-8 duration-1000">
-            <div className="mb-6 text-7xl text-white/40 font-serif leading-none">"</div>
-            <blockquote className="space-y-8">
-              <p className="text-2xl font-medium leading-relaxed text-white">
-                {testimonials[currentTestimonial].quote}
-              </p>
-              <footer className="flex items-center gap-5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-tr from-white/40 to-white/10 text-2xl font-bold text-white shadow-inner border border-white/30 backdrop-blur-md">
-                  {testimonials[currentTestimonial].author.charAt(1).toUpperCase()}
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-white tracking-wide">
-                    {testimonials[currentTestimonial].author}
-                  </div>
-                  <div className="text-sm text-white/70 font-medium flex items-center gap-1 mt-1">
-                    <CircleCheck className="w-4 h-4" /> Membre vérifié
-                  </div>
-                </div>
-              </footer>
-            </blockquote>
+      {/* ── RIGHT: Form card centered vertically ── */}
+      <div className="relative z-10 min-h-screen flex items-center justify-end px-4 sm:px-10 lg:px-16 xl:px-24">
+        <div
+          className="w-full sm:w-[390px] rounded-2xl p-7 sm:p-8"
+          style={{
+            background: "rgba(255,255,255,0.98)",
+            boxShadow:
+              "0 24px 64px rgba(10,37,64,0.16), 0 4px 12px rgba(10,37,64,0.06)",
+            border: "1px solid rgba(226,232,240,0.8)",
+          }}
+        >
+          {/* Header */}
+          <h2 className="text-lg font-bold mb-0.5" style={{ color: "#0a2540" }}>
+            Se connecter
+          </h2>
+          <p className="text-xs mb-6" style={{ color: "#64748b" }}>
+            Bienvenue ! Entrez vos identifiants pour continuer.
+          </p>
 
-            {/* Dots indicator */}
-            <div className="mt-12 flex gap-3">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentTestimonial(index)}
-                  className={`h-2.5 rounded-full transition-all duration-500 ease-in-out ${
-                    index === currentTestimonial
-                      ? "w-10 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-                      : "w-2.5 bg-white/30 hover:bg-white/50"
-                  }`}
-                  aria-label={`Go to testimonial ${index + 1}`}
-                />
-              ))}
-            </div>
+          {/* Google */}
+          <button
+            type="button"
+            onClick={handleGoogleSignin}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2.5 rounded-xl h-11 font-semibold text-sm mb-5 transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-60"
+            style={{
+              background: "#fff",
+              border: "1.5px solid #e2e8f0",
+              color: "#1e293b",
+              boxShadow: "0 1px 3px rgba(10,37,64,0.06)",
+            }}
+          >
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Continuer avec Google
+          </button>
+
+          {/* Divider */}
+          <div className="relative flex items-center mb-5">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              ou
+            </span>
+            <div className="flex-1 h-px bg-slate-200" />
           </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <div className="relative">
+                <Mail
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors"
+                  style={{ color: focused.email ? "#2563eb" : "#94a3b8" }}
+                />
+                <input
+                  id="signin-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  onFocus={() => setFocused((f) => ({ ...f, email: true }))}
+                  onBlur={() => setFocused((f) => ({ ...f, email: false }))}
+                  disabled={loading}
+                  className="w-full h-14 rounded-xl pl-10 pr-4 pt-5 pb-1 text-sm font-medium outline-none transition-all disabled:opacity-60"
+                  style={{
+                    background: "#f8fafc",
+                    border: errors.email
+                      ? "1.5px solid #ef4444"
+                      : focused.email
+                        ? "1.5px solid #2563eb"
+                        : "1.5px solid #e2e8f0",
+                    color: "#0a2540",
+                    boxShadow: focused.email
+                      ? "0 0 0 3px rgba(37,99,235,0.1)"
+                      : "none",
+                  }}
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="signin-email"
+                  className="absolute left-10 pointer-events-none select-none transition-all duration-200"
+                  style={{
+                    top: isFloating("email") ? "6px" : "50%",
+                    transform: isFloating("email")
+                      ? "none"
+                      : "translateY(-50%)",
+                    fontSize: isFloating("email") ? "9px" : "12px",
+                    fontWeight: isFloating("email") ? 700 : 500,
+                    color: errors.email
+                      ? "#ef4444"
+                      : focused.email
+                        ? "#2563eb"
+                        : "#94a3b8",
+                    letterSpacing: isFloating("email") ? "0.07em" : "normal",
+                    textTransform: isFloating("email") ? "uppercase" : "none",
+                  }}
+                >
+                  Email ou numéro de mobile
+                </label>
+              </div>
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-500 ml-1 font-medium">
+                  {errors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="relative">
+                <Lock
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors"
+                  style={{ color: focused.password ? "#2563eb" : "#94a3b8" }}
+                />
+                <input
+                  id="signin-password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  onFocus={() => setFocused((f) => ({ ...f, password: true }))}
+                  onBlur={() => setFocused((f) => ({ ...f, password: false }))}
+                  disabled={loading}
+                  className="w-full h-14 rounded-xl pl-10 pr-12 pt-5 pb-1 text-sm font-medium outline-none transition-all disabled:opacity-60"
+                  style={{
+                    background: "#f8fafc",
+                    border: errors.password
+                      ? "1.5px solid #ef4444"
+                      : focused.password
+                        ? "1.5px solid #2563eb"
+                        : "1.5px solid #e2e8f0",
+                    color: "#0a2540",
+                    boxShadow: focused.password
+                      ? "0 0 0 3px rgba(37,99,235,0.1)"
+                      : "none",
+                  }}
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="signin-password"
+                  className="absolute left-10 pointer-events-none select-none transition-all duration-200"
+                  style={{
+                    top: isFloating("password") ? "6px" : "50%",
+                    transform: isFloating("password")
+                      ? "none"
+                      : "translateY(-50%)",
+                    fontSize: isFloating("password") ? "9px" : "12px",
+                    fontWeight: isFloating("password") ? 700 : 500,
+                    color: errors.password
+                      ? "#ef4444"
+                      : focused.password
+                        ? "#2563eb"
+                        : "#94a3b8",
+                    letterSpacing: isFloating("password") ? "0.07em" : "normal",
+                    textTransform: isFloating("password")
+                      ? "uppercase"
+                      : "none",
+                  }}
+                >
+                  Mot de passe
+                </label>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors hover:text-slate-600"
+                  style={{ color: "#94a3b8" }}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-xs text-red-500 ml-1 font-medium">
+                  {errors.password}
+                </p>
+              )}
+            </div>
+
+            {/* Forgot */}
+            <div className="flex justify-end -mt-1">
+              <Link
+                href="/forgot-password"
+                className="text-xs font-semibold hover:underline underline-offset-4"
+                style={{ color: "#2563eb" }}
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                height: "48px",
+                background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                boxShadow: "0 4px 14px rgba(37,99,235,0.35)",
+              }}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-4 h-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    />
+                  </svg>
+                  Connexion en cours...
+                </span>
+              ) : (
+                "Se connecter"
+              )}
+            </button>
+          </form>
+
+          {/* Divider + create account */}
+          <div className="relative flex items-center my-4">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              ou
+            </span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          <Link
+            href="/signup"
+            className="w-full flex items-center justify-center rounded-xl font-semibold text-sm transition-all hover:bg-slate-100 active:scale-95"
+            style={{
+              height: "44px",
+              background: "#f1f5f9",
+              color: "#0a2540",
+              border: "1.5px solid #e2e8f0",
+            }}
+          >
+            Créez-vous un compte ici  
+          </Link>
         </div>
       </div>
     </div>
