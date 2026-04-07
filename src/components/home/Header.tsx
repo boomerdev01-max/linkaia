@@ -120,9 +120,9 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
         <div className="flex items-center gap-2 md:gap-3">
           {/* ── Badge solde L-Gems ─────────────────────────────────────── */}
           {/* Affiché uniquement sur md+ pour ne pas écraser le mobile     */}
-          <div className="hidden md:block">
+          {/* <div className="hidden md:block">
             <WalletBadge variant="compact" />
-          </div>
+          </div>*/}
 
           {/* Notifications */}
           <button
