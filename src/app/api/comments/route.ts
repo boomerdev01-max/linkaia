@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
+import { trackEvent } from "@/lib/behavioral-tracking"; // ✨ Nouvel import
 
 /**
  * GET /api/comments?postId=xxx&parentId=xxx
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     if (!postId) {
       return NextResponse.json(
         { success: false, error: "postId requis" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -114,10 +115,13 @@ export async function GET(request: NextRequest) {
               type: userReaction.type,
             }
           : null,
-        reactionCounts: comment.reactions.reduce((acc, r) => {
-          acc[r.type.code] = (acc[r.type.code] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
+        reactionCounts: comment.reactions.reduce(
+          (acc, r) => {
+            acc[r.type.code] = (acc[r.type.code] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ),
       };
     });
 
@@ -137,7 +141,7 @@ export async function GET(request: NextRequest) {
     console.error("❌ Error fetching comments:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch comments" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -145,7 +149,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/comments
  * Crée un nouveau commentaire ou une réponse
- * 
+ *
  * Body:
  * - postId: string (requis)
  * - content: string (requis)
@@ -161,7 +165,7 @@ export async function POST(request: NextRequest) {
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -172,7 +176,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -182,7 +186,7 @@ export async function POST(request: NextRequest) {
     if (!postId || !content) {
       return NextResponse.json(
         { success: false, error: "postId et content requis" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -203,7 +207,7 @@ export async function POST(request: NextRequest) {
     if (!post) {
       return NextResponse.json(
         { success: false, error: "Post non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -225,7 +229,7 @@ export async function POST(request: NextRequest) {
       if (!parentComment) {
         return NextResponse.json(
           { success: false, error: "Commentaire parent non trouvé" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -294,6 +298,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // ✨ Tracking comportemental — signal fort (commentaire = engagement élevé)
+    trackEvent({
+      userId: user.id,
+      eventType: "post_comment",
+      targetId: postId,
+      targetType: "post",
+      postId,
+    });
+
     return NextResponse.json({
       success: true,
       message: "Commentaire créé avec succès",
@@ -303,7 +316,7 @@ export async function POST(request: NextRequest) {
     console.error("❌ Error creating comment:", error);
     return NextResponse.json(
       { success: false, error: "Failed to create comment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -152,6 +152,9 @@ model User {
 
   @@map("users")
 
+  matchingCursor       MatchingCursor?
+  userEvents UserEvent[]
+  contentAffinities UserContentAffinity[]
 }
 
 // ============================================
@@ -452,30 +455,43 @@ model Friendship {
 
 model Post {
   id          String   @id @default(uuid())
-  
+
+  // Auteur
   authorId    String   @map("author_id")
   author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  content     String?  @db.Text // Texte du post (optionnel si photos/vidéos)
+
+  // Contenu
+  content     String?  @db.Text // Texte du post (optionnel si médias uniquement)
+
+  // Visibilité
   visibility  String   @default("public") // "public" | "friends" | "private"
-  
-  // Médias associés
+
+  // ✨ NOUVEAUTÉS : Catégorie et Tags
+  categoryId  String?  @map("category_id")
+  category    PostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags        PostTagRelation[]
+
+  // Médias
   media       PostMedia[]
-  
+
   // Interactions
   reactions   Reaction[]
   comments    Comment[]
-  
+
   // Métadonnées
   editedAt    DateTime? @map("edited_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  views PostView[]
+  // Vues
+  views       PostView[]
 
+  // Index
   @@index([authorId])
   @@index([visibility])
+  @@index([categoryId])   // Index pour les filtres par catégorie
   @@index([createdAt])
+
   @@map("posts")
 }
 
@@ -1939,4 +1955,142 @@ model CreatorScore {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("creator_scores")
+}
+
+// ============================================
+// CATÉGORIES DE POSTS (Volet 1 — Feed intelligent)
+// ============================================
+
+model PostCategory {
+  id    String @id @default(uuid())
+  code  String @unique
+  // Valeurs suggérées :
+  // "culture" | "voyage" | "lifestyle" | "famille_valeurs"
+  // "spiritualite" | "cuisine" | "mode_beaute"
+  // "humour" | "actualite" | "sport_bienetre"
+  label String
+  emoji String
+  order Int    @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  posts Post[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("post_categories")
+}
+
+model PostTag {
+  id   String @id @default(uuid())
+  name String @unique // tag normalisé en minuscule, sans accents si possible
+
+  posts PostTagRelation[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("post_tags")
+}
+
+model PostTagRelation {
+  postId String @map("post_id")
+  tagId  String @map("tag_id")
+  post   Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    PostTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tag_relations")
+}
+
+// ============================================
+// TRACKING COMPORTEMENTAL (Volet 1 — Feed intelligent)
+// ============================================
+
+model UserEvent {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Types d'événements capturés :
+  // "post_view"      → l'user a vu un post dans son feed
+  // "post_reaction"  → l'user a réagi à un post
+  // "post_comment"   → l'user a commenté un post
+  // "profile_view"   → l'user a visité un profil
+  // "profile_like"   → l'user a liké un profil
+  // "story_view"     → l'user a regardé une story
+  // "message_sent"   → l'user a initié une conversation
+  eventType String @map("event_type")
+
+  // Entité concernée
+  targetId   String? @map("target_id")
+  targetType String? @map("target_type") // "post" | "profile" | "story"
+
+  // Snapshot de la catégorie au moment de l'événement (pour les posts)
+  categoryCode String? @map("category_code")
+
+  // Temps passé en secondes (pour les vues)
+  durationSeconds Int? @map("duration_seconds")
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, eventType])
+  @@index([userId, categoryCode])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("user_events")
+}
+
+model UserContentAffinity {
+  id           String @id @default(uuid())
+  userId       String @map("user_id")
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Code de la catégorie (ex: "voyage", "cuisine", "spiritualite"...)
+  categoryCode String @map("category_code")
+
+  // Score calculé entre 0 et 100
+  affinityScore Float @default(0) @map("affinity_score")
+
+  // Compteurs bruts qui alimentent le score
+  viewCount     Int @default(0) @map("view_count")
+  reactionCount Int @default(0) @map("reaction_count")
+  commentCount  Int @default(0) @map("comment_count")
+  profileViewCount Int @default(0) @map("profile_view_count")
+
+  lastUpdated DateTime @default(now()) @map("last_updated")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, categoryCode])
+  @@index([userId, affinityScore(sort: Desc)])
+  @@map("user_content_affinities")
+}
+
+// ============================================
+// CURSEUR DE MATCHING (Volet 2 — Matching par lots)
+// ============================================
+
+model MatchingCursor {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Dernier userId analysé — sert de curseur pour la prochaine requête
+  lastProcessedUserId String? @map("last_processed_user_id")
+
+  // Nombre total de candidats analysés depuis le début du cycle
+  totalProcessed Int @default(0) @map("total_processed")
+
+  // true = on a parcouru toute la base une fois → on recommence
+  fullCycleCompleted Boolean @default(false) @map("full_cycle_completed")
+
+  // Quand le dernier batch a été calculé
+  lastRunAt DateTime? @map("last_run_at")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("matching_cursors")
 }

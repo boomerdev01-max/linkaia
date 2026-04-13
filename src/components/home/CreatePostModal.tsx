@@ -1,7 +1,7 @@
 // src/components/home/CreatePostModal.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   ImageIcon,
@@ -12,6 +12,7 @@ import {
   X,
   Users,
   Loader2,
+  Tag, // ✨ Nouvel import
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,8 +48,26 @@ export default function CreatePostModal({
   >("public");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✨ Nouveaux états pour les catégories
+  const [categories, setCategories] = useState<
+    { id: string; code: string; label: string; emoji: string }[]
+  >([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // ✨ Nouveau useEffect pour charger les catégories
+  useEffect(() => {
+    fetch("/api/posts/categories")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setCategories(data.categories);
+      })
+      .catch(() => {});
+  }, []);
 
   if (!isOpen) return null;
 
@@ -155,6 +174,11 @@ export default function CreatePostModal({
 
       formData.append("visibility", visibility);
 
+      // ✨ Ajouter la catégorie sélectionnée
+      if (selectedCategoryId) {
+        formData.append("categoryId", selectedCategoryId);
+      }
+
       // Ajouter les photos
       selectedImages.forEach((image) => {
         formData.append("photos", image);
@@ -182,6 +206,7 @@ export default function CreatePostModal({
         setSelectedVideo(null);
         setVideoPreview(null);
         setVisibility("public");
+        setSelectedCategoryId(null); // ✨ Réinitialiser la catégorie
 
         if (imageInputRef.current) imageInputRef.current.value = "";
         if (videoInputRef.current) videoInputRef.current.value = "";
@@ -324,6 +349,38 @@ export default function CreatePostModal({
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+          )}
+
+          {/* ✨ Sélection de catégorie */}
+          {categories.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Catégorie
+                <span className="text-xs text-gray-400">(optionnel)</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCategoryId(
+                        selectedCategoryId === cat.id ? null : cat.id,
+                      )
+                    }
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                      selectedCategoryId === cat.id
+                        ? "bg-[#0F4C5C] text-white border-[#0F4C5C]"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-[#0F4C5C]/50"
+                    }`}
+                  >
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

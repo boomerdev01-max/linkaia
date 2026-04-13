@@ -71,6 +71,8 @@ const SUBSCRIPTION_LIMITS = {
   },
 } as const;
 
+const BATCH_SIZE = 5;
+
 // ============================================
 // FONCTION PRINCIPALE : Suggestions de profils
 // ============================================
@@ -591,6 +593,297 @@ async function storeMatchScore(
     });
   } catch (err) {
     console.error("⚠️ [MATCHING] Erreur storeMatchScore:", err);
+  }
+}
+
+// ============================================
+// MATCHING PAR LOTS — VOLET 2
+// ============================================
+
+/**
+ * Calcule le prochain lot de 5 candidats pour un utilisateur
+ * en utilisant le MatchingCursor pour ne jamais repasser sur les mêmes
+ */
+export async function computeNextMatchBatch(
+  userId: string,
+  userLevel: string,
+): Promise<{
+  computed: number;
+  hasMore: boolean;
+  cycleCompleted: boolean;
+}> {
+  try {
+    // 1. Lire le curseur actuel
+    const cursor = await prisma.matchingCursor.findUnique({
+      where: { userId },
+    });
+
+    const lastId = cursor?.lastProcessedUserId ?? "";
+
+    // 2. Récupérer l'utilisateur courant avec profil + préférences
+    //    (même include que getSuggestedProfiles pour réutiliser calculateCompatibilityScore)
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profil: {
+          include: {
+            nationalites: { include: { nationality: true } },
+            interests: { include: { interest: true } },
+            city: true,
+          },
+        },
+        preference: {
+          include: {
+            selectedInterests: { include: { interest: true } },
+            selectedNationalities: { include: { country: true } },
+            selectedCities: { include: { city: true } },
+            selectedGenders: true,
+            selectedSexualOrientations: {
+              include: { sexualOrientation: true },
+            },
+            selectedReligions: { include: { religion: true } },
+            selectedEducationLevels: { include: { educationLevel: true } },
+          },
+        },
+      },
+    });
+
+    if (!currentUser?.profil || !currentUser?.preference) {
+      return { computed: 0, hasMore: false, cycleCompleted: false };
+    }
+
+    // 3. Sélectionner les BATCH_SIZE candidats suivants via le curseur
+    const candidates = await prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: userId } },
+          { isProfileCompleted: true },
+          { isPreferenceCompleted: true },
+          // Curseur : uniquement les IDs stricts après le dernier traité
+          ...(lastId ? [{ id: { gt: lastId } }] : []),
+        ],
+      },
+      take: BATCH_SIZE,
+      orderBy: { id: "asc" }, // tri stable indispensable pour le curseur
+      select: {
+        id: true,
+        nom: true,
+        prenom: true,
+        level: true,
+        emailVerified: true,
+        profil: {
+          select: {
+            pseudo: true,
+            profilePhotoUrl: true,
+            birthdate: true,
+            gender: true,
+            sexualOrientation: true,
+            religion: true,
+            educationLevel: true,
+            city: { select: { id: true, displayName: true } },
+            nationalites: {
+              select: { nationality: { select: { code: true } } },
+            },
+            interests: {
+              select: { interest: { select: { id: true } } },
+            },
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    // 4. Fin de cycle détectée
+    const cycleCompleted = candidates.length < BATCH_SIZE;
+
+    if (candidates.length === 0) {
+      // Remettre le curseur à zéro pour le prochain cycle
+      await prisma.matchingCursor.upsert({
+        where: { userId },
+        update: {
+          lastProcessedUserId: null,
+          totalProcessed: 0,
+          fullCycleCompleted: true,
+          lastRunAt: new Date(),
+        },
+        create: {
+          userId,
+          lastProcessedUserId: null,
+          totalProcessed: 0,
+          fullCycleCompleted: true,
+          lastRunAt: new Date(),
+        },
+      });
+      return { computed: 0, hasMore: false, cycleCompleted: true };
+    }
+
+    // 5. Calculer et stocker le score pour chaque candidat du lot
+    let computed = 0;
+
+    for (const candidate of candidates) {
+      if (!candidate.profil) continue;
+
+      // Réutilise le cache si le score est encore valide
+      const existing = await getValidMatchScore(
+        userId,
+        candidate.id,
+        currentUser.profil.updatedAt,
+        currentUser.preference.updatedAt,
+      );
+
+      if (!existing) {
+        const scoreData = calculateCompatibilityScore(
+          currentUser.profil,
+          currentUser.preference,
+          candidate.profil,
+        );
+        await storeMatchScore(userId, candidate.id, scoreData);
+      }
+
+      computed++;
+    }
+
+    // 6. Mettre à jour le curseur
+    const dernierCandidatId = candidates.at(-1)!.id;
+
+    await prisma.matchingCursor.upsert({
+      where: { userId },
+      update: {
+        lastProcessedUserId: cycleCompleted ? null : dernierCandidatId,
+        totalProcessed: cycleCompleted ? 0 : { increment: candidates.length },
+        fullCycleCompleted: cycleCompleted,
+        lastRunAt: new Date(),
+      },
+      create: {
+        userId,
+        lastProcessedUserId: cycleCompleted ? null : dernierCandidatId,
+        totalProcessed: cycleCompleted ? 0 : candidates.length,
+        fullCycleCompleted: cycleCompleted,
+        lastRunAt: new Date(),
+      },
+    });
+
+    console.log("✅ [MATCHING] Batch calculé:", {
+      userId,
+      computed,
+      dernierCandidatId,
+      cycleCompleted,
+    });
+
+    return {
+      computed,
+      hasMore: !cycleCompleted,
+      cycleCompleted,
+    };
+  } catch (error) {
+    console.error("❌ [MATCHING] Erreur computeNextMatchBatch:", error);
+    return { computed: 0, hasMore: false, cycleCompleted: false };
+  }
+}
+
+/**
+ * Récupère le portefeuille de matchs déjà calculés, paginé
+ * Respecte les limites de score selon le niveau d'abonnement
+ */
+export async function getMatchPortfolio(
+  userId: string,
+  userLevel: string,
+  page: number = 1,
+  pageSize: number = 10,
+): Promise<{
+  matchs: MatchResult[];
+  total: number;
+  hasMore: boolean;
+  cursorInfo: { totalAnalyses: number; hasMore: boolean };
+}> {
+  try {
+    const limits =
+      SUBSCRIPTION_LIMITS[userLevel as keyof typeof SUBSCRIPTION_LIMITS] ??
+      SUBSCRIPTION_LIMITS.free;
+
+    const skip = (page - 1) * pageSize;
+
+    const [matchScores, total, cursor] = await Promise.all([
+      prisma.matchScore.findMany({
+        where: {
+          userId,
+          score: {
+            gte: limits.minScore,
+            ...(limits.maxScore !== null ? { lte: limits.maxScore } : {}),
+          },
+        },
+        orderBy: { score: "desc" },
+        skip,
+        take: pageSize,
+        include: {
+          targetUser: {
+            select: {
+              id: true,
+              nom: true,
+              prenom: true,
+              level: true,
+              profil: {
+                select: {
+                  pseudo: true,
+                  profilePhotoUrl: true,
+                  birthdate: true,
+                  city: { select: { displayName: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.matchScore.count({
+        where: {
+          userId,
+          score: {
+            gte: limits.minScore,
+            ...(limits.maxScore !== null ? { lte: limits.maxScore } : {}),
+          },
+        },
+      }),
+      prisma.matchingCursor.findUnique({ where: { userId } }),
+    ]);
+
+    const matchs: MatchResult[] = matchScores.map((ms) => {
+      const profil = ms.targetUser.profil;
+      const age = profil?.birthdate
+        ? new Date().getFullYear() - new Date(profil.birthdate).getFullYear()
+        : null;
+
+      return {
+        userId: ms.targetUser.id,
+        nom: ms.targetUser.nom,
+        prenom: ms.targetUser.prenom,
+        pseudo: profil?.pseudo ?? null,
+        level: ms.targetUser.level,
+        photo: profil?.profilePhotoUrl ?? null,
+        score: ms.score,
+        matchedCriteria: (ms.matchedCriteria as string[]) ?? [],
+        totalCriteria: ms.totalCriteria,
+        age,
+        location: profil?.city?.displayName ?? null,
+      };
+    });
+
+    return {
+      matchs,
+      total,
+      hasMore: skip + pageSize < total,
+      cursorInfo: {
+        totalAnalyses: cursor?.totalProcessed ?? 0,
+        hasMore: !cursor?.fullCycleCompleted,
+      },
+    };
+  } catch (error) {
+    console.error("❌ [MATCHING] Erreur getMatchPortfolio:", error);
+    return {
+      matchs: [],
+      total: 0,
+      hasMore: false,
+      cursorInfo: { totalAnalyses: 0, hasMore: true },
+    };
   }
 }
 

@@ -5,9 +5,10 @@ import Header from "./Header";
 import LeftSidebar from "./LeftSidebar";
 import RightSidebar from "./RightSidebar";
 import MainFeed from "./MainFeed";
-import { LiaButton } from "@/components/lia/LiaButton"; // ← AJOUT
+import { LiaButton } from "@/components/lia/LiaButton"; 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHogTracking } from "@/hooks/usePostHogTracking"; // ✨ Nouvel import
 
 interface User {
   id: string;
@@ -25,12 +26,20 @@ interface HomeClientProps {
 
 export default function HomeClient({ user }: HomeClientProps) {
   const router = useRouter();
+  const { identifyUser } = usePostHogTracking(); // ✨ Hook PostHog
 
   useEffect(() => {
     if (!user?.id) {
       router.push("/signin");
+      return;
     }
-  }, [user, router]);
+    
+    // ✨ Identifier l'utilisateur dans PostHog
+    identifyUser(user.id, {
+      level: (user as any).level,
+      prenom: user.prenom,
+    });
+  }, [user, router, identifyUser]); // ✨ Ajout de identifyUser dans les dépendances
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
