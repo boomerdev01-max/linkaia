@@ -1,17 +1,9 @@
-// app/api/reactions/toggle/route.ts
+// src/app/api/reactions/toggle/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
+import { trackEvent } from "@/lib/behavioral-tracking"; // ✨
 
-/**
- * POST /api/reactions/toggle
- * Ajoute ou retire une réaction sur un post ou commentaire
- *
- * Body:
- * - targetType: "post" | "comment"
- * - targetId: string (ID du post ou commentaire)
- * - reactionCode: "support" | "love" | "laugh" | "wow" | "sad" | "angry"
- */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -22,7 +14,7 @@ export async function POST(request: NextRequest) {
     if (!supabaseUser) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -33,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Utilisateur non trouvé" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -46,11 +38,10 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "targetType, targetId et reactionCode requis",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Récupérer le type de réaction
     const reactionType = await prisma.reactionType.findUnique({
       where: { code: reactionCode },
     });
@@ -58,60 +49,41 @@ export async function POST(request: NextRequest) {
     if (!reactionType) {
       return NextResponse.json(
         { success: false, error: "Type de réaction invalide" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Vérifier que la cible existe
     if (targetType === "post") {
       const post = await prisma.post.findUnique({
         where: { id: targetId },
-        include: {
-          author: {
-            select: {
-              id: true,
-              nom: true,
-              prenom: true,
-            },
-          },
-        },
+        include: { author: { select: { id: true, nom: true, prenom: true } } },
       });
 
       if (!post) {
         return NextResponse.json(
           { success: false, error: "Post non trouvé" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
-      // Vérifier si l'utilisateur a déjà réagi
       const existingReaction = await prisma.reaction.findFirst({
-        where: {
-          userId: user.id,
-          postId: targetId,
-        },
+        where: { userId: user.id, postId: targetId },
       });
 
       if (existingReaction) {
-        // Si même type de réaction, on la supprime (toggle off)
         if (existingReaction.typeId === reactionType.id) {
-          await prisma.reaction.delete({
-            where: { id: existingReaction.id },
-          });
-
+          await prisma.reaction.delete({ where: { id: existingReaction.id } });
           return NextResponse.json({
             success: true,
             message: "Réaction retirée",
             action: "removed",
           });
         } else {
-          // Sinon, on met à jour avec le nouveau type
           const updatedReaction = await prisma.reaction.update({
             where: { id: existingReaction.id },
             data: { typeId: reactionType.id },
             include: { type: true },
           });
-
           return NextResponse.json({
             success: true,
             message: "Réaction modifiée",
@@ -120,17 +92,11 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
-        // Créer la nouvelle réaction
         const newReaction = await prisma.reaction.create({
-          data: {
-            userId: user.id,
-            postId: targetId,
-            typeId: reactionType.id,
-          },
+          data: { userId: user.id, postId: targetId, typeId: reactionType.id },
           include: { type: true },
         });
 
-        // Créer une notification pour l'auteur du post
         if (post.authorId !== user.id) {
           await prisma.notification.create({
             data: {
@@ -147,6 +113,15 @@ export async function POST(request: NextRequest) {
           });
         }
 
+        // ✨ Tracking — seulement sur "added", signal fort
+        trackEvent({
+          userId: user.id,
+          eventType: "post_reaction",
+          targetId,
+          targetType: "post",
+          postId: targetId,
+        });
+
         return NextResponse.json({
           success: true,
           message: "Réaction ajoutée",
@@ -155,54 +130,38 @@ export async function POST(request: NextRequest) {
         });
       }
     } else if (targetType === "comment") {
+      // ── Bloc commentaire : identique à l'original, aucun tracking
+      //    (les réactions sur commentaires ne reflètent pas d'affinité catégorielle)
       const comment = await prisma.comment.findUnique({
         where: { id: targetId },
-        include: {
-          author: {
-            select: {
-              id: true,
-              nom: true,
-              prenom: true,
-            },
-          },
-        },
+        include: { author: { select: { id: true, nom: true, prenom: true } } },
       });
 
       if (!comment) {
         return NextResponse.json(
           { success: false, error: "Commentaire non trouvé" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
-      // Vérifier si l'utilisateur a déjà réagi
       const existingReaction = await prisma.reaction.findFirst({
-        where: {
-          userId: user.id,
-          commentId: targetId,
-        },
+        where: { userId: user.id, commentId: targetId },
       });
 
       if (existingReaction) {
-        // Si même type de réaction, on la supprime (toggle off)
         if (existingReaction.typeId === reactionType.id) {
-          await prisma.reaction.delete({
-            where: { id: existingReaction.id },
-          });
-
+          await prisma.reaction.delete({ where: { id: existingReaction.id } });
           return NextResponse.json({
             success: true,
             message: "Réaction retirée",
             action: "removed",
           });
         } else {
-          // Sinon, on met à jour avec le nouveau type
           const updatedReaction = await prisma.reaction.update({
             where: { id: existingReaction.id },
             data: { typeId: reactionType.id },
             include: { type: true },
           });
-
           return NextResponse.json({
             success: true,
             message: "Réaction modifiée",
@@ -211,7 +170,6 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
-        // Créer la nouvelle réaction
         const newReaction = await prisma.reaction.create({
           data: {
             userId: user.id,
@@ -221,7 +179,6 @@ export async function POST(request: NextRequest) {
           include: { type: true },
         });
 
-        // Créer une notification pour l'auteur du commentaire
         if (comment.authorId !== user.id) {
           await prisma.notification.create({
             data: {
@@ -249,37 +206,29 @@ export async function POST(request: NextRequest) {
     } else {
       return NextResponse.json(
         { success: false, error: "targetType invalide" },
-        { status: 400 }
+        { status: 400 },
       );
     }
   } catch (error) {
     console.error("❌ Error toggling reaction:", error);
     return NextResponse.json(
       { success: false, error: "Failed to toggle reaction" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-/**
- * GET /api/reactions/types
- * Récupère tous les types de réactions disponibles
- */
 export async function GET() {
   try {
     const reactionTypes = await prisma.reactionType.findMany({
       orderBy: { order: "asc" },
     });
-
-    return NextResponse.json({
-      success: true,
-      data: reactionTypes,
-    });
+    return NextResponse.json({ success: true, data: reactionTypes });
   } catch (error) {
     console.error("❌ Error fetching reaction types:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch reaction types" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

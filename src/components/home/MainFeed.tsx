@@ -1,11 +1,13 @@
 // src/components/home/MainFeed.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PostComposer from "./PostComposer";
 import StoryCarousel from "./StoryCarousel";
 import PostCard from "./PostCard";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles, LayoutList } from "lucide-react";
+import { usePostViewTracker } from "@/hooks/use-post-view-tracker";
+import { usePostHogTracking } from "@/hooks/usePostHogTracking";
 
 interface User {
   id: string;
@@ -22,34 +24,21 @@ interface Post {
   visibility: string;
   createdAt: string;
   editedAt: string | null;
+  categoryCode: string | null; // ✨
+  category: { code: string; label: string; emoji: string } | null; // ✨
   author: {
     id: string;
     nom: string;
     prenom: string;
-    profil: {
-      pseudo: string | null;
-      profilePhotoUrl: string | null;
-    } | null;
+    profil: { pseudo: string | null; profilePhotoUrl: string | null } | null;
   };
-  media: Array<{
-    id: string;
-    type: string;
-    url: string;
-    order: number;
-  }>;
+  media: Array<{ id: string; type: string; url: string; order: number }>;
   userReaction: {
     id: string;
-    type: {
-      code: string;
-      emoji: string;
-      label: string;
-    };
+    type: { code: string; emoji: string; label: string };
   } | null;
   reactionCounts: Record<string, number>;
-  _count: {
-    reactions: number;
-    comments: number;
-  };
+  _count: { reactions: number; comments: number };
 }
 
 interface PaginationInfo {
@@ -60,22 +49,66 @@ interface PaginationInfo {
   hasMore: boolean;
 }
 
-interface PostsResponse {
-  success: boolean;
-  data: {
-    posts: Post[];
-    pagination: PaginationInfo;
-  };
-}
-
 interface MainFeedProps {
   user: User;
 }
 
+// ── Sous-composant : wrapper pour le tracking de vue ────────────────────────
+function TrackedPostCard({
+  post,
+  currentUserId,
+  onPostUpdate,
+  onPostDelete,
+}: {
+  post: Post;
+  currentUserId: string;
+  onPostUpdate?: () => void;
+  onPostDelete?: () => void;
+}) {
+  const { trackPostView } = usePostHogTracking();
+
+  // Le hook existant gère déjà le POST /api/posts/[id]/view
+  // On y ajoute juste le tracking PostHog
+  const ref = usePostViewTracker({
+    postId: post.id,
+    disabled: post.author.id === currentUserId,
+    delay: 1500,
+  });
+
+  // Tracker PostHog à la première vue (synchronisé avec le hook)
+  const hasTrackedPH = useRef(false);
+  useEffect(() => {
+    if (hasTrackedPH.current || post.author.id === currentUserId) return;
+    const timer = setTimeout(() => {
+      // On vérifie que l'élément est toujours dans le DOM
+      if (ref.current) {
+        trackPostView(post.id, post.categoryCode);
+        hasTrackedPH.current = true;
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div ref={ref}>
+      <PostCard
+        post={post}
+        currentUserId={currentUserId}
+        onPostUpdate={onPostUpdate}
+        onPostDelete={onPostDelete}
+      />
+    </div>
+  );
+}
+
+// ── Composant principal ──────────────────────────────────────────────────────
 export default function MainFeed({ user }: MainFeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [smartFeed, setSmartFeed] = useState(false); // ✨ toggle feed intelligent
+  const [isSmartActive, setIsSmartActive] = useState(false); // ✨ état réel retourné par l'API
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 5,
@@ -83,23 +116,28 @@ export default function MainFeed({ user }: MainFeedProps) {
     totalPages: 0,
     hasMore: false,
   });
-  const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchPosts = async (page = 1, loadMore = false) => {
+  const fetchPosts = async (
+    page = 1,
+    loadMore = false,
+    useSmartFeed = smartFeed,
+  ) => {
     try {
-      if (loadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
+      loadMore ? setLoadingMore(true) : setLoading(true);
 
-      const response = await fetch(`/api/posts?page=${page}&limit=5`);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: "5",
+        smart: String(useSmartFeed), // ✨
+      });
+
+      const response = await fetch(`/api/posts?${params}`);
 
       if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        throw new Error(`Erreur ${response.status}`);
       }
 
-      const data: PostsResponse = await response.json();
+      const data = await response.json();
 
       if (data.success && data.data) {
         if (loadMore) {
@@ -108,11 +146,15 @@ export default function MainFeed({ user }: MainFeedProps) {
           setPosts(data.data.posts);
         }
         setPagination(data.data.pagination);
+        setIsSmartActive(
+          data.data.smartFeed &&
+            data.data.posts.some((p: Post) => p.categoryCode !== null),
+        );
       } else {
         setError("Erreur lors du chargement des posts");
       }
     } catch (err) {
-      console.error("Erreur lors du chargement des posts:", err);
+      console.error("Erreur chargement posts:", err);
       setError("Impossible de charger les publications");
     } finally {
       setLoading(false);
@@ -124,26 +166,23 @@ export default function MainFeed({ user }: MainFeedProps) {
     fetchPosts(1, false);
   }, []);
 
-  const handlePostCreated = () => {
-    fetchPosts(1, false); // Rafraîchir depuis la page 1
+  // ✨ Quand l'utilisateur bascule le feed intelligent
+  const handleToggleSmartFeed = () => {
+    const next = !smartFeed;
+    setSmartFeed(next);
+    fetchPosts(1, false, next);
   };
 
-  const handlePostUpdate = () => {
-    fetchPosts(1, false); // Rafraîchir pour voir les changements
-  };
-
-  const handlePostDelete = (deletedPostId: string) => {
-    setPosts((prevPosts) =>
-      prevPosts.filter((post) => post.id !== deletedPostId)
-    );
-  };
-
+  const handlePostCreated = () => fetchPosts(1, false);
+  const handlePostUpdate = () => fetchPosts(1, false);
+  const handlePostDelete = (id: string) =>
+    setPosts((prev) => prev.filter((p) => p.id !== id));
   const loadMorePosts = () => {
-    if (pagination.hasMore && !loadingMore) {
+    if (pagination.hasMore && !loadingMore)
       fetchPosts(pagination.page + 1, true);
-    }
   };
 
+  // ── Skeleton de chargement (identique à l'original) ─────────────────────
   if (loading) {
     return (
       <div className="w-full space-y-6">
@@ -157,22 +196,22 @@ export default function MainFeed({ user }: MainFeedProps) {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+                  <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-gray-700" />
                   <div className="space-y-2">
-                    <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded"></div>
-                    <div className="h-3 w-24 bg-gray-300 dark:bg-gray-700 rounded"></div>
+                    <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
+                    <div className="h-3 w-24 bg-gray-300 dark:bg-gray-700 rounded" />
                   </div>
                 </div>
               </div>
               <div className="space-y-2 mb-4">
-                <div className="h-4 w-full bg-gray-300 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 w-full bg-gray-300 dark:bg-gray-700 rounded" />
+                <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-700 rounded" />
               </div>
-              <div className="h-48 bg-gray-300 dark:bg-gray-700 rounded-lg mb-4"></div>
+              <div className="h-48 bg-gray-300 dark:bg-gray-700 rounded-lg mb-4" />
               <div className="flex justify-between">
-                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
-                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
-                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
+                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-lg" />
+                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-lg" />
+                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-lg" />
               </div>
             </div>
           ))}
@@ -201,11 +240,37 @@ export default function MainFeed({ user }: MainFeedProps) {
 
   return (
     <div className="w-full space-y-6">
-      {/* Composer de post */}
       <PostComposer user={user} onPostCreated={handlePostCreated} />
-
-      {/* Stories */}
       <StoryCarousel user={user} />
+
+      {/* ✨ Toggle Feed Intelligent */}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {isSmartActive
+            ? "Fil personnalisé selon vos habitudes"
+            : "Fil d'actualité chronologique"}
+        </p>
+        <button
+          onClick={handleToggleSmartFeed}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+            smartFeed
+              ? "bg-[#0F4C5C] text-white border-[#0F4C5C]"
+              : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#0F4C5C]/40"
+          }`}
+        >
+          {smartFeed ? (
+            <>
+              <Sparkles className="w-3.5 h-3.5" />
+              Personnalisé
+            </>
+          ) : (
+            <>
+              <LayoutList className="w-3.5 h-3.5" />
+              Récent
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Liste des posts */}
       <div className="space-y-4">
@@ -220,7 +285,7 @@ export default function MainFeed({ user }: MainFeedProps) {
           </div>
         ) : (
           posts.map((post) => (
-            <PostCard
+            <TrackedPostCard
               key={post.id}
               post={post}
               currentUserId={user.id}
@@ -231,7 +296,7 @@ export default function MainFeed({ user }: MainFeedProps) {
         )}
       </div>
 
-      {/* Load more avec pagination */}
+      {/* Charger plus */}
       {pagination.hasMore && posts.length > 0 && (
         <div className="text-center py-6">
           <button

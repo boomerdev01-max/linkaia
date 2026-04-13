@@ -22,7 +22,7 @@ const prisma = new PrismaClient({ adapter });
  * 2. Grandes villes internationales (population estimée)
  * 3. Villes africaines importantes
  *
- * Estimation : ~200 pays + ~500-1000 villes = Léger pour Supabase Free
+ * Estimation : ~200 pays + ~500-1000 villes / Léger pour Supabase Free
  */
 
 // Liste des pays francophones prioritaires (codes ISO)
@@ -1786,6 +1786,47 @@ export async function seedWalletData(prisma: any) {
   console.log("🎉 Wallet data seeding complete!");
 }
 
+// Post Categories Seeding
+
+const postCategories = [
+  { code: "culture", label: "Culture & Arts", emoji: "🎭", order: 1 },
+  { code: "voyage", label: "Voyage & Découvertes", emoji: "✈️", order: 2 },
+  { code: "lifestyle", label: "Lifestyle", emoji: "✨", order: 3 },
+  {
+    code: "famille_valeurs",
+    label: "Famille & Valeurs",
+    emoji: "👨‍👩‍👧",
+    order: 4,
+  },
+  {
+    code: "spiritualite",
+    label: "Spiritualité & Foi",
+    emoji: "🙏",
+    order: 5,
+  },
+  { code: "cuisine", label: "Cuisine & Gastronomie", emoji: "🍽️", order: 6 },
+  { code: "mode_beaute", label: "Mode & Beauté", emoji: "💄", order: 7 },
+  { code: "humour", label: "Humour & Bonne humeur", emoji: "😄", order: 8 },
+  { code: "actualite", label: "Actualité", emoji: "📰", order: 9 },
+  {
+    code: "sport_bienetre",
+    label: "Sport & Bien-être",
+    emoji: "💪",
+    order: 10,
+  },
+];
+
+async function seedPostCategories() {
+  for (const cat of postCategories) {
+    await prisma.postCategory.upsert({
+      where: { code: cat.code },
+      update: {},
+      create: cat,
+    });
+  }
+  console.log("✅ Post categories seeded");
+}
+
 async function seedReferenceData() {
   console.log("📚 Seeding Reference Data for Preferences...");
 
@@ -1967,6 +2008,7 @@ async function main() {
   await seedInterests(); // 8️⃣ Centres d'intérêt
   await seedReactions(); // 9️⃣ Réactions
   await seedWalletData(prisma); // 10️⃣ Wallet & cadeaux
+  await seedPostCategories(); // 11 Smart Feed
 
   console.log("🎉 Seed completed successfully!");
 }
