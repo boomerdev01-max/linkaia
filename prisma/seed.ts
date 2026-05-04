@@ -515,6 +515,21 @@ async function seedRBAC() {
       endpoint: "/api/admin/dashboard",
       description: "Dashboard data",
     },
+    {
+      method: "GET",
+      endpoint: "/api/admin/prestige-codes",
+      description: "Liste des codes prestige",
+    },
+    {
+      method: "POST",
+      endpoint: "/api/admin/prestige-codes",
+      description: "Générer un code prestige",
+    },
+    {
+      method: "DELETE",
+      endpoint: "/api/admin/prestige-codes",
+      description: "Révoquer un code prestige",
+    },
   ];
 
   const actions: Record<string, any> = {};
@@ -894,6 +909,11 @@ async function seedRBAC() {
     "transaction.read": ["GET:/api/admin/transactions"],
     "statistics.view": ["GET:/api/admin/statistics"],
     "dashboard.view": ["GET:/api/admin/dashboard"],
+    "prestige.manage": [
+      "GET:/api/admin/prestige-codes",
+      "POST:/api/admin/prestige-codes",
+      "DELETE:/api/admin/prestige-codes",
+    ],
   };
 
   for (const [permKey, actionKeys] of Object.entries(permActionMap)) {
@@ -1022,7 +1042,7 @@ async function seedRBAC() {
           adminCreated: true,
           isFirstLogin: true,
           mustChangePassword: false,
-          level: "free",
+          level: "FREE",
         },
       });
 

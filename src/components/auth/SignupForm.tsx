@@ -730,7 +730,7 @@ export default function SignupForm() {
           {/* ── Stat badges top ── */}
           <div className="absolute top-10 left-8 right-8 flex gap-3 z-10">
             {[
-              { num: 120000, suffix: "+", label: "Membres" },
+              { num: 1000, suffix: "+", label: "Membres" },
               { num: 48, suffix: " pays", label: "Connectés" },
               { num: 98, suffix: "%", label: "Satisfaction" },
             ].map((s, i) => (

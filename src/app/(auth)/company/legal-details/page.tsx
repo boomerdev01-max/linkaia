@@ -18,7 +18,7 @@ export default async function CompanyLegalDetailsPage() {
     include: { companyProfile: true },
   });
 
-  if (!user || user.userType !== "COMPANY") {
+  if (!user || !user.companyProfile) {
     redirect("/home");
   }
 
@@ -26,7 +26,7 @@ export default async function CompanyLegalDetailsPage() {
     redirect(`/verify-email?email=${encodeURIComponent(user.email)}`);
   }
 
-  if (user.companyProfile?.isLegalDetailsCompleted) {
+  if (user.companyProfile.isLegalDetailsCompleted) {
     redirect("/company/documents");
   }
 

@@ -18,7 +18,8 @@ export default async function CompanyDocumentsPage() {
     include: { companyProfile: true },
   });
 
-  if (!user || user.userType !== "COMPANY") {
+  // ✅ On déduit le type depuis la présence de companyProfile
+  if (!user || !user.companyProfile) {
     redirect("/home");
   }
 
@@ -26,11 +27,11 @@ export default async function CompanyDocumentsPage() {
     redirect(`/verify-email?email=${encodeURIComponent(user.email)}`);
   }
 
-  if (!user.companyProfile?.isLegalDetailsCompleted) {
+  if (!user.companyProfile.isLegalDetailsCompleted) {
     redirect("/company/legal-details");
   }
 
-  if (user.companyProfile?.isDocumentsCompleted) {
+  if (user.companyProfile.isDocumentsCompleted) {
     redirect("/home");
   }
 

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       include: { companyProfile: true },
     });
 
-    if (!fullUser || fullUser.userType !== "COMPANY") {
+    if (!fullUser || !fullUser.companyProfile) {
       return NextResponse.json(
         { error: "Ce endpoint est réservé aux comptes entreprises" },
         { status: 403 },

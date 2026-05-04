@@ -124,7 +124,6 @@ export async function notifyAdminNewUser(newUserId: string) {
         prenom: true,
         nom: true,
         email: true,
-        userType: true,
         createdAt: true,
         profil: { select: { pseudo: true, profilePhotoUrl: true } },
       },
@@ -144,7 +143,6 @@ export async function notifyAdminNewUser(newUserId: string) {
         newUserId: newUser.id,
         displayName,
         email: newUser.email,
-        userType: newUser.userType,
         photo: newUser.profil?.profilePhotoUrl ?? null,
       },
     });

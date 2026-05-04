@@ -3,8 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
 import {
-  ADMIN_ROLES,
-  STANDARD_ROLES,
   isAdminRole,
   getPrimaryRole,
   getDefaultRouteForRole,
@@ -26,7 +24,7 @@ async function getUserRoles(supabaseUserId: string): Promise<string[]> {
   });
 
   if (!user) return [];
-  return user.roles.map((userRole: { role: { name: any; }; }) => userRole.role.name);
+  return user.roles.map((userRole) => userRole.role.name);
 }
 
 /**
@@ -75,8 +73,8 @@ export async function proxy(request: NextRequest) {
       "/events",
       "/profile",
       "/chat",
-      "/lives",    // ← nouveau : pages lives (liste + room + création)
-      "/wallet",   // ← nouveau : recharge wallet, historique
+      "/lives",
+      "/wallet",
       "/my-stats",
     ];
 
@@ -92,11 +90,25 @@ export async function proxy(request: NextRequest) {
   // UTILISATEURS AUTHENTIFIÉS
   // ============================================
 
-  // Récupérer l'utilisateur complet
   const user = await prisma.user.findUnique({
     where: { supabaseId: supabaseUser.id },
-    include: {
-      companyProfile: true,
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      mustChangePassword: true,
+      isProfileCompleted: true,
+      isProfileTerminated: true,
+      skipProfileSetup: true,
+      isPreferenceCompleted: true,
+      isPreferenceTerminated: true,
+      skipPreferenceSetup: true,
+      companyProfile: {
+        select: {
+          isLegalDetailsCompleted: true,
+          isDocumentsCompleted: true,
+        },
+      },
       roles: {
         include: {
           role: true,
@@ -111,7 +123,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Déterminer les rôles de l'utilisateur
-  const userRoles = await getUserRoles(supabaseUser.id);
+  const userRoles = user.roles.map((userRole) => userRole.role.name);
   const isAdmin = hasAdminRole(userRoles);
   const primaryRole = getPrimaryRole(userRoles);
   const defaultRoute = primaryRole
@@ -181,14 +193,12 @@ export async function proxy(request: NextRequest) {
 
   // === REDIRECTIONS DEPUIS SIGNIN/SIGNUP ===
   if (pathname === "/signin" || pathname === "/signup") {
-    // Profil non complété → onboarding profil
     if (!user.isProfileCompleted && !user.skipProfileSetup) {
       return NextResponse.redirect(
         new URL("/onboarding/profile/welcome", request.url),
       );
     }
 
-    // Préférences non faites → onboarding préférences
     if (
       (user.isProfileCompleted || user.skipProfileSetup) &&
       !user.isPreferenceCompleted &&
@@ -200,20 +210,17 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    // Tout complété → home
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
   // === PROTECTION PAGES /HOME ===
   if (pathname.startsWith("/home")) {
-    // Profil non complété
     if (!user.isProfileCompleted && !user.skipProfileSetup) {
       return NextResponse.redirect(
         new URL("/onboarding/profile/welcome", request.url),
       );
     }
 
-    // Préférences non faites
     if (
       (user.isProfileCompleted || user.skipProfileSetup) &&
       !user.isPreferenceCompleted &&
@@ -232,7 +239,6 @@ export async function proxy(request: NextRequest) {
     pathname === "/onboarding/profile"
   ) {
     if (user.isProfileCompleted || user.skipProfileSetup) {
-      // Préférences non faites → aller aux préférences
       if (
         !user.isPreferenceCompleted &&
         !user.isPreferenceTerminated &&
@@ -242,7 +248,6 @@ export async function proxy(request: NextRequest) {
           new URL("/onboarding/preferences/welcome", request.url),
         );
       }
-      // Tout fait → home
       return NextResponse.redirect(new URL("/home", request.url));
     }
   }
@@ -252,7 +257,6 @@ export async function proxy(request: NextRequest) {
     pathname === "/onboarding/preferences/welcome" ||
     pathname === "/onboarding/preferences"
   ) {
-    // Préférences déjà faites → home
     if (
       user.isPreferenceCompleted ||
       user.isPreferenceTerminated ||
@@ -261,7 +265,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/home", request.url));
     }
 
-    // Profil non fait → retour au profil
     if (!user.isProfileCompleted && !user.skipProfileSetup) {
       return NextResponse.redirect(
         new URL("/onboarding/profile/welcome", request.url),
@@ -270,7 +273,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // === GESTION FLOW ENTREPRISE ===
-  if (user.userType === "COMPANY") {
+  // companyProfile !== null suffit pour identifier un user COMPANY
+  if (user.companyProfile !== null) {
     // Email non vérifié
     if (!user.emailVerified && !pathname.startsWith("/verify-email")) {
       return NextResponse.redirect(
@@ -284,7 +288,6 @@ export async function proxy(request: NextRequest) {
     // Détails légaux non complétés
     if (
       user.emailVerified &&
-      user.companyProfile &&
       !user.companyProfile.isLegalDetailsCompleted &&
       !pathname.startsWith("/company/legal-details")
     ) {
@@ -296,7 +299,6 @@ export async function proxy(request: NextRequest) {
     // Documents non uploadés
     if (
       user.emailVerified &&
-      user.companyProfile &&
       user.companyProfile.isLegalDetailsCompleted &&
       !user.companyProfile.isDocumentsCompleted &&
       !pathname.startsWith("/company/documents")
@@ -306,7 +308,7 @@ export async function proxy(request: NextRequest) {
 
     // Tout complété → empêcher retour
     if (
-      user.companyProfile?.isDocumentsCompleted &&
+      user.companyProfile.isDocumentsCompleted &&
       (pathname.startsWith("/company/legal-details") ||
         pathname.startsWith("/company/documents"))
     ) {
