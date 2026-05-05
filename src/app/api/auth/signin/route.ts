@@ -15,86 +15,128 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password } = signinSchema.parse(body);
 
+    console.log(`🔄 [SIGNIN] Attempt for: ${email}`);
+
     // 1️⃣ TROUVER L'UTILISATEUR DANS PRISMA
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
+      console.warn(`⚠️ [SIGNIN] User not found in Prisma: ${email}`);
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
+    /*console.log(
+      `✅ [SIGNIN] User found in Prisma: ${user.id} | provider: ${user.provider} | emailVerified: ${user.emailVerified} | hasPassword: ${!!user.password} | hasSupabaseId: ${!!user.supabaseId}`,
+    );*/
+
     // 2️⃣ VÉRIFIER SI C'EST UN UTILISATEUR OAUTH (pas de password)
     if (!user.password) {
+      console.warn(`⚠️ [SIGNIN] OAuth user tried password login: ${email}`);
       return NextResponse.json(
         {
           error: "Ce compte utilise Google OAuth. Connectez-vous avec Google.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // 3️⃣ VÉRIFIER LE MOT DE PASSE AVEC BCRYPT (hash stocké dans Prisma)
+    /*console.log(
+      `🔄 [SIGNIN] Comparing password with bcrypt | hash prefix: ${user.password.substring(0, 7)}`,
+    );*/
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
+      console.warn(
+        `⚠️ [SIGNIN] Password mismatch for: ${email} | hash prefix: ${user.password.substring(0, 7)}`,
+      );
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
+    //console.log(`✅ [SIGNIN] Password match OK for: ${email}`);
+
     // 4️⃣ VÉRIFIER SI L'EMAIL EST VÉRIFIÉ
     if (!user.emailVerified) {
+      console.warn(`⚠️ [SIGNIN] Email not verified in Prisma for: ${email}`);
       return NextResponse.json(
         {
           error: "Email non vérifié",
           needsVerification: true,
           email: user.email,
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
+    //console.log(`✅ [SIGNIN] Email verified in Prisma for: ${email}`);
+
     // 5️⃣ VÉRIFIER QUE L'UTILISATEUR EXISTE DANS SUPABASE
     if (!user.supabaseId) {
-      console.error("❌ User has no supabaseId:", user.id);
+      console.error(`❌ [SIGNIN] User has no supabaseId in Prisma: ${user.id}`);
       return NextResponse.json(
         { error: "Erreur de synchronisation. Contactez le support." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // 6️⃣ CONNECTER VIA SUPABASE AUTH
-    // ✅ CLEF DU PROBLÈME : On doit utiliser le password en clair avec Supabase
-    // Supabase va comparer avec SON hash (pas celui de Prisma)
+    // Supabase compare le password en clair avec SON propre hash (indépendant de Prisma)
+    /*console.log(
+      `🔄 [SIGNIN] Attempting Supabase signInWithPassword for: ${email}`,
+    );*/
     const supabase = await createSupabaseServerClient();
 
     const { data: authData, error: signInError } =
       await supabase.auth.signInWithPassword({
         email,
-        password, // ⚠️ Password en clair - Supabase va vérifier avec son propre hash
+        password,
       });
 
     if (signInError) {
-      console.error("❌ Supabase sign in error:", signInError);
+      console.error(
+        `❌ [SIGNIN] Supabase signInWithPassword failed for: ${email}`,
+        {
+          code: signInError.code,
+          message: signInError.message,
+          status: signInError.status,
+        },
+      );
 
-      // Si Supabase refuse, c'est que le password ne correspond pas
-      // (peut arriver si l'user a changé son password côté Prisma seulement)
+      // Cas particulier : email non confirmé côté Supabase
+      // (peut arriver si confirmUserEmail a échoué silencieusement lors du verify)
+      if (signInError.message?.toLowerCase().includes("email not confirmed")) {
+        console.error(
+          `❌ [SIGNIN] Email not confirmed in Supabase for supabaseId: ${user.supabaseId} — confirmUserEmail may have failed`,
+        );
+        return NextResponse.json(
+          {
+            error: "Erreur de confirmation d'email. Contactez le support.",
+          },
+          { status: 500 },
+        );
+      }
+
       return NextResponse.json(
         {
           error:
             "Erreur lors de la connexion. Réinitialisez votre mot de passe.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // 7️⃣ SESSION CRÉÉE AVEC SUCCÈS ! 🎉
-    console.log(`✅ User signed in: ${authData.user.id}`);
+    //console.log(
+    //`✅ [SIGNIN] Success for: ${email} | supabaseId: ${authData.user.id} | session: ${!!authData.session}`,
+    //);
 
     return NextResponse.json({
       success: true,
@@ -108,16 +150,17 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.warn(`⚠️ [SIGNIN] Zod validation error:`, error.issues);
       return NextResponse.json(
         { error: error.issues[0].message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.error("❌ Signin error:", error);
+    console.error("❌ [SIGNIN] Unexpected error:", error);
     return NextResponse.json(
       { error: "Une erreur est survenue lors de la connexion" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
