@@ -96,7 +96,6 @@ export async function POST(request: Request) {
           verificationCodeExpiry,
           provider: "email",
           emailVerified: false,
-          userType: "COMPANY",
         },
       });
 

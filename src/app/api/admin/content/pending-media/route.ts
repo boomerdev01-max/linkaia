@@ -22,7 +22,6 @@ async function getAdminUser() {
 }
 
 // ─── GET /api/admin/content/pending-media ────────────────────────────────────
-// Retourne deux jeux de données selon le paramètre ?tab=profiles|companies
 export async function GET(request: NextRequest) {
   try {
     const user = await getAdminUser();
@@ -41,11 +40,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") ?? "20");
     const skip = (page - 1) * limit;
 
-    // ── Onglet 1 : Photos de profil des utilisateurs individuels ────────────
+    // ── Onglet 1 : Utilisateurs individuels (sans companyProfile) ───────────
     if (tab === "profiles") {
       const [users, total] = await Promise.all([
         prisma.user.findMany({
-          where: { userType: "INDIVIDUAL" },
+          where: { companyProfile: null },
           skip,
           take: limit,
           orderBy: { createdAt: "desc" },
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
             },
           },
         }),
-        prisma.user.count({ where: { userType: "INDIVIDUAL" } }),
+        prisma.user.count({ where: { companyProfile: null } }),
       ]);
 
       const data = users.map((u) => ({
@@ -85,11 +84,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data, total, page, limit });
     }
 
-    // ── Onglet 2 : Médias des entreprises ───────────────────────────────────
+    // ── Onglet 2 : Entreprises (avec companyProfile) ─────────────────────────
     if (tab === "companies") {
       const [companies, total] = await Promise.all([
         prisma.user.findMany({
-          where: { userType: "COMPANY" },
+          where: { companyProfile: { isNot: null } },
           skip,
           take: limit,
           orderBy: { createdAt: "desc" },
@@ -115,7 +114,7 @@ export async function GET(request: NextRequest) {
             },
           },
         }),
-        prisma.user.count({ where: { userType: "COMPANY" } }),
+        prisma.user.count({ where: { companyProfile: { isNot: null } } }),
       ]);
 
       const data = companies.map((c) => ({

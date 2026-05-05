@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const search = searchParams.get("search") || "";
     const levelFilter = searchParams.get("level") || "";
-    const typeFilter = searchParams.get("type") || "";
+    const typeFilter = searchParams.get("type") || ""; // "individual" | "company"
     const skip = (page - 1) * limit;
 
     const whereConditions: any = { AND: [] };
@@ -40,8 +40,18 @@ export async function GET(request: NextRequest) {
         ],
       });
     }
-    if (levelFilter) whereConditions.AND.push({ level: levelFilter });
-    if (typeFilter) whereConditions.AND.push({ userType: typeFilter });
+
+    if (levelFilter) {
+      whereConditions.AND.push({ level: levelFilter });
+    }
+
+    // Filtre par type : on déduit COMPANY/INDIVIDUAL via la relation companyProfile
+    if (typeFilter === "COMPANY") {
+      whereConditions.AND.push({ companyProfile: { isNot: null } });
+    } else if (typeFilter === "INDIVIDUAL") {
+      whereConditions.AND.push({ companyProfile: null });
+    }
+
     if (whereConditions.AND.length === 0) delete whereConditions.AND;
 
     const total = await prisma.user.count({ where: whereConditions });
@@ -55,8 +65,8 @@ export async function GET(request: NextRequest) {
         email: true,
         emailVerified: true,
         level: true,
-        userType: true,
         createdAt: true,
+        companyProfile: { select: { id: true } }, // Pour déduire le type
         profil: { select: { profilePhotoUrl: true } },
         roles: { include: { role: { select: { name: true } } } },
       },
@@ -75,7 +85,7 @@ export async function GET(request: NextRequest) {
           email: u.email,
           emailVerified: u.emailVerified,
           level: u.level,
-          userType: u.userType,
+          userType: u.companyProfile ? "COMPANY" : "INDIVIDUAL", // ← déduit
           profilePhotoUrl: u.profil?.profilePhotoUrl ?? null,
           primaryRole,
           createdAt: u.createdAt,
@@ -109,19 +119,16 @@ export async function GET(request: NextRequest) {
 // ============================================================
 export async function POST(request: NextRequest) {
   try {
-    // 🔐 Auth
     const { user: adminUser, error } = await getAuthenticatedUser();
     if (!adminUser || error) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // 🛡️ Permission
     const canCreate = await userHasPermission(adminUser.id, "user.create");
     if (!canCreate) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    // 📝 Validation du body
     const body = await request.json();
     const { nom, prenom, email, roleId } = body as {
       nom: string;
@@ -145,7 +152,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✉️ Unicité email (Prisma)
     const existing = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
     });
@@ -156,13 +162,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🎭 Rôle valide
     const role = await prisma.role.findUnique({ where: { id: roleId } });
     if (!role) {
       return NextResponse.json({ error: "Rôle introuvable." }, { status: 400 });
     }
 
-    // S'assurer qu'on n'assigne pas standard_user ou company_user via ce flow
     const ADMIN_ASSIGNABLE = [
       "administrator",
       "moderator",
@@ -176,21 +180,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🔑 Génération du mot de passe (invisible pour l'admin)
     const plainPassword = generateSecurePassword();
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-    // 👤 Création dans Supabase Auth
-    // (obligatoire pour l'auth hybride email/OAuth — génère le supabaseId)
     const supabaseUser = await createSupabaseAuthUser(
       email.trim().toLowerCase(),
       plainPassword,
       { nom: nom.trim(), prenom: prenom.trim() },
-      true, // email_confirm: true → bypass vérification email
+      true,
     );
 
-    // Écrire le rôle dans app_metadata Supabase
-    // (lu par proxy.ts sans appel DB, compatible Edge Runtime)
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -200,7 +199,6 @@ export async function POST(request: NextRequest) {
       app_metadata: { primary_role: role.name },
     });
 
-    // 🗄️ Création Prisma + assignation du rôle (transaction atomique)
     const newUser = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
@@ -213,9 +211,8 @@ export async function POST(request: NextRequest) {
           emailVerified: true,
           adminCreated: true,
           isFirstLogin: true,
-          mustChangePassword: true, // ← Force le changement dès la 1ère connexion
-          level: "free",
-          // Bypass des étapes d'onboarding non pertinentes pour les comptes staff
+          mustChangePassword: true,
+          level: "FREE",
           isProfileCompleted: false,
           skipProfileSetup: true,
           isPreferenceCompleted: false,
@@ -230,12 +227,9 @@ export async function POST(request: NextRequest) {
       return created;
     });
 
-    // 📨 Envoi de l'email avec les identifiants
-    // 📢 Notifier les admins d'un nouveau compte staff
     await notifyAdminNewAdminUser(newUser.id, adminUser.id).catch(
       console.error,
     );
-    // Le plainPassword n'est jamais retourné à l'admin dans la réponse API
     await sendAdminCreatedUserEmail(
       email.trim().toLowerCase(),
       plainPassword,

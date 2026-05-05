@@ -572,3 +572,6 @@
 └── tsconfig.json
 
 216 directories, 356 files
+
+
+Dell Latitude 5550 processeur Intel Core Ultra 5-125U

@@ -19,6 +19,13 @@ enum UserType {
   COMPANY
 }
 
+enum UserLevel {
+    FREE
+    VIP
+    PLATINUM
+    PRESTIGE
+}
+
 enum CompanyStatus {
   PENDING
   VERIFIED
@@ -82,12 +89,11 @@ model User {
   adminCreated       Boolean @default(false) @map("admin_created")
   mustChangePassword Boolean @default(false) @map("must_change_password")
   isFirstLogin       Boolean @default(true) @map("is_first_login")
-  level              String  @default("free") // free, premium, platinium, prestige
-  userType              UserType @default(INDIVIDUAL) @map("user_type")
+  level  UserLevel @default(FREE) @map("level")
 
   // ✨ NOUVELLES RELATIONS RBAC
   roles UserRole[]
-  
+
   // Relations
   profil Profil?
   companyProfile CompanyProfile?
@@ -132,6 +138,7 @@ model User {
   reportsReceived   Report[] @relation("ReportsReceived")
   reportsReviewed   Report[] @relation("ReportsReviewed")
   liaConversation   LiaConversation?
+  prestigeCode  PrestigeInviteCode? @relation("UsedPrestigeCode")
 
   // === WALLET & MONÉTISATION ===
   wallet            Wallet?
@@ -155,6 +162,7 @@ model User {
   matchingCursor       MatchingCursor?
   userEvents UserEvent[]
   contentAffinities UserContentAffinity[]
+  prestigeInviteCodes PrestigeInviteCode[] @relation("GeneratedPrestigeCodes")
 }
 
 // ============================================
@@ -169,7 +177,7 @@ model Role {
   
   users       UserRole[]
   permissions RolePermission[]
-  
+  //Questions de clarifications !
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -2093,4 +2101,49 @@ model MatchingCursor {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("matching_cursors")
+}
+
+model PrestigeInviteCode {
+  id        String   @id @default(uuid())
+
+  // Le code unique envoyé au prospect (format : XXXX-XXXX-XXXX)
+  code      String   @unique
+
+  // Email du prospect à qui le code a été envoyé
+  prospectEmail String @map("prospect_email")
+
+  // Nom / identité du prospect (pour le mail et l'audit)
+  prospectName  String @map("prospect_name")
+
+  // Note interne de l'admin (ex: "Célébrité XY, référencé par Z")
+  adminNote     String? @map("admin_note") @db.Text
+
+  // Statut du code
+  // "pending"  → généré, email envoyé, pas encore utilisé
+  // "used"     → utilisé pour créer un compte
+  // "revoked"  → révoqué manuellement par un admin
+  // "expired"  → dépassé la date d'expiration sans être utilisé
+  status    String   @default("pending")
+
+  // Date d'expiration (30 jours par défaut après génération)
+  expiresAt DateTime @map("expires_at")
+
+  // Qui a généré ce code
+  generatedById String @map("generated_by_id")
+  generatedBy   User   @relation("GeneratedPrestigeCodes", fields: [generatedById], references: [id], onDelete: Cascade)
+
+  // L'utilisateur qui a utilisé ce code (null tant que non utilisé)
+  usedById  String?  @unique @map("used_by_id")
+  usedBy    User?    @relation("UsedPrestigeCode", fields: [usedById], references: [id], onDelete: SetNull)
+
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([prospectEmail])
+  @@index([expiresAt])
+  @@index([generatedById])
+  @@map("prestige_invite_codes")
 }

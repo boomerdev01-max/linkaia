@@ -4,12 +4,14 @@ import { prisma } from "./prisma";
 // ============================================
 // TYPES
 // ============================================
+type UserLevel = "FREE" | "VIP" | "PLATINUM" | "PRESTIGE";
+
 interface MatchResult {
   userId: string;
   nom: string;
   prenom: string;
   pseudo: string | null;
-  level: string;
+  level: UserLevel;
   photo: string | null;
   score: number;
   matchedCriteria: string[];
@@ -38,37 +40,14 @@ const SCORE_WEIGHTS = {
   interests: 15,
 } as const;
 
-const SUBSCRIPTION_LIMITS = {
-  free: {
-    minScore: 20,
-    maxScore: 50,
-    dailyLimit: 10,
-  },
-  premium: {
-    minScore: 20,
-    maxScore: 90,
-    dailyLimit: 50,
-  },
-  vip: {
-    minScore: 20,
-    maxScore: 90,
-    dailyLimit: 50,
-  },
-  platinum: {
-    minScore: 20,
-    maxScore: 100,
-    dailyLimit: null,
-  },
-  platinium: {
-    minScore: 20,
-    maxScore: 100,
-    dailyLimit: null,
-  },
-  prestige: {
-    minScore: 20,
-    maxScore: 100,
-    dailyLimit: null,
-  },
+const SUBSCRIPTION_LIMITS: Record<
+  string,
+  { minScore: number; maxScore: number | null; dailyLimit: number | null }
+> = {
+  FREE:     { minScore: 20, maxScore: 50,   dailyLimit: 10   },
+  VIP:      { minScore: 20, maxScore: 90,   dailyLimit: 50   },
+  PLATINUM: { minScore: 20, maxScore: 100,  dailyLimit: null },
+  PRESTIGE: { minScore: 20, maxScore: 100,  dailyLimit: null },
 } as const;
 
 const BATCH_SIZE = 5;
@@ -266,7 +245,7 @@ export async function getSuggestedProfiles(
         nom: candidate.nom,
         prenom: candidate.prenom,
         pseudo: candidate.profil.pseudo ?? null,
-        level: candidate.level,
+        level: candidate.level as UserLevel,
         photo: candidate.profil.profilePhotoUrl ?? null,
         score: scoreData.score,
         matchedCriteria: scoreData.matchedCriteria,
@@ -294,17 +273,15 @@ export async function getSuggestedProfiles(
 
     // 4. Appliquer les restrictions du niveau d'abonnement
     const limits =
-      SUBSCRIPTION_LIMITS[userLevel as keyof typeof SUBSCRIPTION_LIMITS] ??
-      SUBSCRIPTION_LIMITS.free;
+      SUBSCRIPTION_LIMITS[userLevel.toUpperCase()] ??
+      SUBSCRIPTION_LIMITS["FREE"];
 
     console.log("📉 [MATCHING] Limites appliquées:", {
       userLevel,
       limits,
-      limitesRecuperees: SUBSCRIPTION_LIMITS[
-        userLevel as keyof typeof SUBSCRIPTION_LIMITS
-      ]
+      limitesRecuperees: SUBSCRIPTION_LIMITS[userLevel.toUpperCase()]
         ? "Trouvées"
-        : "Fallback vers free",
+        : "Fallback vers FREE",
     });
 
     const filtered = scoredCandidates.filter(
@@ -798,8 +775,8 @@ export async function getMatchPortfolio(
 }> {
   try {
     const limits =
-      SUBSCRIPTION_LIMITS[userLevel as keyof typeof SUBSCRIPTION_LIMITS] ??
-      SUBSCRIPTION_LIMITS.free;
+      SUBSCRIPTION_LIMITS[userLevel.toUpperCase()] ??
+      SUBSCRIPTION_LIMITS["FREE"];
 
     const skip = (page - 1) * pageSize;
 
@@ -857,7 +834,7 @@ export async function getMatchPortfolio(
         nom: ms.targetUser.nom,
         prenom: ms.targetUser.prenom,
         pseudo: profil?.pseudo ?? null,
-        level: ms.targetUser.level,
+        level: ms.targetUser.level as UserLevel,
         photo: profil?.profilePhotoUrl ?? null,
         score: ms.score,
         matchedCriteria: (ms.matchedCriteria as string[]) ?? [],

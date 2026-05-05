@@ -202,7 +202,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Mettre à jour le level de l'utilisateur
   await prisma.user.update({
     where: { id: userId },
-    data: { level: subscriptionType.code.toLowerCase() },
+    data: { level: subscriptionType.code as "FREE" | "VIP" | "PLATINUM" | "PRESTIGE" },
   });
 
   // Ajouter dans l'historique
@@ -336,7 +336,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   // Mettre à jour le level
   await prisma.user.update({
     where: { id: stripeCustomer.userId },
-    data: { level: "free" },
+    data: { level: "FREE" },
   });
 
   // Ajouter dans l'historique

@@ -1,36 +1,61 @@
-import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
-import "./global.css";
-import { Toaster } from "@/components/ui/sonner";
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono, Unbounded, Montserrat } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import './globals.css'
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
-  display: "swap",
-});
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist-sans',
+})
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
+})
+const unbounded = Unbounded({
+  subsets: ['latin'],
+  variable: '--font-unbounded',
+})
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+})
 
 export const metadata: Metadata = {
-  title: "Linkaïa - Connect with Trust, Impact the World",
+  title: 'Linkaïa - Where Trust Builds Tomorrow',
   description:
-    "The hybrid social network bridging individuals and organizations across borders. Verify your identity, join trusted communities, and track your social impact in real-time.",
+    'Le premier réseau social hybride qui unit les cœurs et les ambitions à travers les frontières.',
   icons: {
-    icon: "/images/fuck.png",
-    apple: "/images/fuck.png",
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
   },
-};
+}
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="en" className="light">
-      <body className={`${plusJakartaSans.variable} font-display antialiased`}>
+    <html lang="en">
+      <body
+        className={`${geist.variable} ${geistMono.variable} ${unbounded.variable} ${montserrat.variable} font-sans antialiased`}
+      >
         {children}
-        <Toaster position="top-right" richColors />
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }
