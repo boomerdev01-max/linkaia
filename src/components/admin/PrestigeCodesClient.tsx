@@ -248,7 +248,7 @@ export default function PrestigeCodesClient() {
       {/* Message succès */}
       {successMessage && (
         <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
           <p className="text-sm text-green-800">{successMessage}</p>
           <button
             onClick={() => setSuccessMessage("")}
@@ -591,7 +591,7 @@ export default function PrestigeCodesClient() {
 
               {formError && (
                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   {formError}
                 </div>
               )}

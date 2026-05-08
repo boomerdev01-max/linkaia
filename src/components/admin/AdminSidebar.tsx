@@ -23,6 +23,9 @@ import {
   TrendingUp,
   Mail,
   Wrench,
+  FileText, // 🆕 Posts publiés
+  Video, // 🆕 Vidéos
+  ScrollText, // 🆕 Règles & Confidentialité
 } from "lucide-react";
 import { Image as ImageIcon } from "lucide-react";
 
@@ -44,6 +47,9 @@ const iconMap: Record<string, any> = {
   Settings,
   Wrench,
   Wallet,
+  FileText, // 🆕
+  Video, // 🆕
+  ScrollText, // 🆕
 };
 
 // ─── Types ────────────────────────────────────────────────────────

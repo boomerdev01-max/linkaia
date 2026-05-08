@@ -1,12 +1,17 @@
-// src/app/admin/prestige-codes/page.tsx
+// src/app/admin/content/posts/page.tsx
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
 import { userHasPermission } from "@/lib/rbac";
-import { redirect } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
-import PrestigeCodesClient from "@/components/admin/PrestigeCodesClient";
+import PostsModerationClient from "@/components/admin/content/PostsModerationClient";
 
-export default async function PrestigeCodesPage() {
+export const metadata = {
+  title: "Modération des posts - Linkaïa Admin",
+  description: "Consultation et modération des publications de la plateforme",
+};
+
+export default async function PostsModerationPage() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user: supabaseUser },
@@ -27,14 +32,14 @@ export default async function PrestigeCodesPage() {
 
   if (!user) redirect("/signin");
 
-  const canManage = await userHasPermission(user.id, "prestige.manage");
+  const canView = await userHasPermission(user.id, "posts.moderate");
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <div>
         <AdminHeader
-          title="Codes Prestige"
-          description="Gestion des invitations exclusives"
+          title="Accès refusé"
+          description="Vous n'avez pas les permissions pour accéder à cette page"
           userName={`${user.prenom} ${user.nom}`}
           userEmail={user.email}
           userImage={user.profil?.profilePhotoUrl ?? null}
@@ -42,7 +47,7 @@ export default async function PrestigeCodesPage() {
         <div className="p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <p className="text-red-800 font-medium">
-              Vous n'avez pas les permissions pour accéder à cette page.
+              Contactez un administrateur pour obtenir les accès nécessaires.
             </p>
           </div>
         </div>
@@ -53,16 +58,14 @@ export default async function PrestigeCodesPage() {
   return (
     <div>
       <AdminHeader
-        title="Codes Prestige"
-        description=""
+        title="Modération des posts"
+        description="Gérez les publications partagées sur la plateforme"
         userName={`${user.prenom} ${user.nom}`}
         userEmail={user.email}
         userImage={user.profil?.profilePhotoUrl ?? null}
+        notificationCount={0}
       />
-      {/*Générez et gérez les invitations exclusives pour les membres Prestige*/}
-      <div className="p-6">
-        <PrestigeCodesClient />
-      </div>
+      <PostsModerationClient />
     </div>
   );
 }
