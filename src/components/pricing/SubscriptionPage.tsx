@@ -1,3 +1,5 @@
+// src/components/pricing/SubscriptionPage.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";

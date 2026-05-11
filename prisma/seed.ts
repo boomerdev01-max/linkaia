@@ -374,6 +374,18 @@ async function seedRBAC() {
       name: "moderator",
       description: "Modérateur avec accès à la gestion du contenu",
     },
+    {
+      name: "sociologue",
+      description: "Sociologue avec accès complet au système",
+    },
+    {
+      name: "consultant",
+      description: "Consultant avec accès complet au système",
+    },
+    {
+      name: "responsable",
+      description: "Responsable avec accès complet au système",
+    },
   ];
 
   const roles: Record<string, any> = {};
@@ -714,6 +726,25 @@ console.log("✅ Menus created");
         permissionId: permissions[permKey].id,
       },
     });
+  }
+
+  // Sociologue, Consultant, Responsable → toutes les permissions (= administrateur)
+  for (const fullAccessRole of ["sociologue", "consultant", "responsable"]) {
+    for (const permKey of Object.keys(permissions)) {
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: roles[fullAccessRole].id,
+            permissionId: permissions[permKey].id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: roles[fullAccessRole].id,
+          permissionId: permissions[permKey].id,
+        },
+      });
+    }
   }
 
   const moderatorPerms = [

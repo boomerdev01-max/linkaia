@@ -32,7 +32,7 @@ export default async function PostsModerationPage() {
 
   if (!user) redirect("/signin");
 
-  const canView = await userHasPermission(user.id, "posts.moderate");
+  const canView = await userHasPermission(user.id, "post.moderate");
 
   if (!canView) {
     return (
@@ -55,11 +55,13 @@ export default async function PostsModerationPage() {
     );
   }
 
+  {/* Gérez les publications partagées sur la plateforme */}
+
   return (
     <div>
       <AdminHeader
         title="Modération des posts"
-        description="Gérez les publications partagées sur la plateforme"
+        description=""
         userName={`${user.prenom} ${user.nom}`}
         userEmail={user.email}
         userImage={user.profil?.profilePhotoUrl ?? null}
