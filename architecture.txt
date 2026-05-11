@@ -1,4 +1,3 @@
-.
 ├── .env
 ├── .env.sentry-build-plugin
 ├── .gitignore
@@ -12,6 +11,10 @@
 ├── package.json
 ├── postcss.config.mjs
 ├── prisma
+│   ├── migrations
+│   │   ├── 20260504132528_init
+│   │   │   └── migration.sql
+│   │   └── migration_lock.toml
 │   ├── schema.prisma
 │   └── seed.ts
 ├── prisma.config.ts
@@ -36,7 +39,9 @@
 │   │   │   ├── signup
 │   │   │   │   ├── company
 │   │   │   │   │   └── page.tsx
-│   │   │   │   └── page.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── prestige
+│   │   │   │       └── page.tsx
 │   │   │   └── verify-email
 │   │   │       └── page.tsx
 │   │   ├── admin
@@ -44,13 +49,19 @@
 │   │   │   │   └── notifications
 │   │   │   │       └── page.tsx
 │   │   │   ├── config
-│   │   │   │   └── administration
+│   │   │   │   ├── administration
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── legal
 │   │   │   │       └── page.tsx
 │   │   │   ├── content
-│   │   │   │   └── pending-media
+│   │   │   │   ├── pending-media
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── posts
 │   │   │   │       └── page.tsx
 │   │   │   ├── layout.tsx
 │   │   │   ├── page.tsx
+│   │   │   ├── prestige-codes
+│   │   │   │   └── page.tsx
 │   │   │   ├── services
 │   │   │   │   ├── statistics
 │   │   │   │   │   └── page.tsx
@@ -71,7 +82,9 @@
 │   │   ├── api
 │   │   │   ├── admin
 │   │   │   │   ├── content
-│   │   │   │   │   └── pending-media
+│   │   │   │   │   ├── pending-media
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── posts
 │   │   │   │   │       └── route.ts
 │   │   │   │   ├── dashboard
 │   │   │   │   │   └── route.ts
@@ -87,6 +100,7 @@
 │   │   │   │   ├── permissions
 │   │   │   │   │   └── route.ts
 │   │   │   │   ├── prestige-codes
+│   │   │   │   │   └── route.ts
 │   │   │   │   ├── reports
 │   │   │   │   ├── roles
 │   │   │   │   │   ├── [id]
@@ -124,6 +138,11 @@
 │   │   │   │   ├── signup
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── verify-email
+│   │   │   │       └── route.ts
+│   │   │   ├── calls
+│   │   │   │   ├── end
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── token
 │   │   │   │       └── route.ts
 │   │   │   ├── change-password
 │   │   │   │   └── route.ts
@@ -184,6 +203,11 @@
 │   │   │   │   │   │   └── route.ts
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── route.ts
+│   │   │   ├── matching
+│   │   │   │   ├── compute
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── results
+│   │   │   │       └── route.ts
 │   │   │   ├── my-stats
 │   │   │   │   ├── creator
 │   │   │   │   │   └── route.ts
@@ -206,6 +230,8 @@
 │   │   │   │   │   ├── route.ts
 │   │   │   │   │   └── view
 │   │   │   │   │       └── route.ts
+│   │   │   │   ├── categories
+│   │   │   │   │   └── route.ts
 │   │   │   │   ├── create
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── route.ts
@@ -216,6 +242,13 @@
 │   │   │   │   │   └── route.ts
 │   │   │   │   └── update
 │   │   │   │       └── route.ts
+│   │   │   ├── prestige
+│   │   │   │   ├── register
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── validate-code
+│   │   │   │       └── route.ts
+│   │   │   ├── prestige-codes
+│   │   │   │   └── route.ts
 │   │   │   ├── profile
 │   │   │   │   ├── [id]
 │   │   │   │   │   ├── like
@@ -351,12 +384,20 @@
 │   │       └── recharge
 │   │           └── page.tsx
 │   ├── components
+│   │   ├── CtaSection.tsx
+│   │   ├── DashboardImage.tsx
+│   │   ├── Footer.tsx
+│   │   ├── GamificationSection.tsx
+│   │   ├── Header.tsx
+│   │   ├── HeroSection.tsx
 │   │   ├── ModalNavigation.tsx
 │   │   ├── ModalSteps
 │   │   │   ├── GenderStep.tsx
 │   │   │   ├── RelationshipStep.tsx
 │   │   │   └── types.ts
+│   │   ├── MultiUniverseSection.tsx
 │   │   ├── NotificationsClient.tsx
+│   │   ├── PostHogProvider.tsx
 │   │   ├── PreferenceModal
 │   │   │   ├── PreferenceModal.tsx
 │   │   │   ├── PreferenceModalNavigation.tsx
@@ -374,17 +415,22 @@
 │   │   │   │   └── ResidencePreferenceStep.tsx
 │   │   │   └── types.ts
 │   │   ├── SearchResults.tsx
+│   │   ├── TestimonialsSection.tsx
+│   │   ├── TrustSection.tsx
 │   │   ├── admin
 │   │   │   ├── AdminHeader.tsx
 │   │   │   ├── AdminSidebar.tsx
 │   │   │   ├── CreateUserClient.tsx
+│   │   │   ├── PrestigeCodesClient.tsx
 │   │   │   ├── RolesClient.tsx
 │   │   │   ├── TransactionsClient.tsx
 │   │   │   ├── UserProfilesClient.tsx
 │   │   │   ├── config
-│   │   │   │   └── AdminConfigClient.tsx
+│   │   │   │   ├── AdminConfigClient.tsx
+│   │   │   │   └── LegalClient.tsx
 │   │   │   ├── content
-│   │   │   │   └── PendingMediaClient.tsx
+│   │   │   │   ├── PendingMediaClient.tsx
+│   │   │   │   └── PostsModerationClient.tsx
 │   │   │   ├── notifications
 │   │   │   │   └── AdminNotificationsClient.tsx
 │   │   │   ├── reports
@@ -406,13 +452,16 @@
 │   │   │   ├── CompanyLegalDetailsForm.tsx
 │   │   │   ├── CompanySignupForm.tsx
 │   │   │   ├── ForgotPasswordForm.tsx
+│   │   │   ├── PrestigeSignupContent.tsx
 │   │   │   ├── ResetPasswordForm.tsx
 │   │   │   ├── SigninForm.tsx
 │   │   │   ├── SignupForm.tsx
 │   │   │   └── VerifyEmailForm.tsx
 │   │   ├── chat
+│   │   │   ├── CallOverlay.tsx
 │   │   │   ├── ConversationItem.tsx
 │   │   │   ├── ConversationView.tsx
+│   │   │   ├── IncomingCallModal.tsx
 │   │   │   ├── MessageBubble.tsx
 │   │   │   ├── MessageInput.tsx
 │   │   │   ├── TypingIndicator.tsx
@@ -516,8 +565,10 @@
 │   │   │   └── VideosClient.tsx
 │   │   └── wallet
 │   │       └── WalletBadge.tsx
+│   ├── globals.d.ts
 │   ├── hooks
 │   │   ├── use-auto-save.ts
+│   │   ├── use-call.ts
 │   │   ├── use-conversations.ts
 │   │   ├── use-messages.ts
 │   │   ├── use-post-view-tracker.ts
@@ -527,7 +578,9 @@
 │   │   ├── useGiftNotifications.ts
 │   │   ├── useLiaChat.ts
 │   │   ├── useLiveGifts.ts
+│   │   ├── useMatching.ts
 │   │   ├── useNotifications.ts
+│   │   ├── usePostHogTracking.ts
 │   │   ├── useProfileLike.ts
 │   │   ├── useReports.ts
 │   │   ├── useReviews.ts
@@ -538,6 +591,7 @@
 │   ├── lib
 │   │   ├── admin-notification-helpers.ts
 │   │   ├── auth-helpers.ts
+│   │   ├── behavioral-tracking.ts
 │   │   ├── client.ts
 │   │   ├── currency.ts
 │   │   ├── email.ts
@@ -550,6 +604,7 @@
 │   │   ├── redirect-logic.ts
 │   │   ├── roles-config.ts
 │   │   ├── server.ts
+│   │   ├── smart-feed.ts
 │   │   ├── story-storage.ts
 │   │   ├── stripe-club.ts
 │   │   ├── stripe-lgems.ts
@@ -571,7 +626,4 @@
 ├── tailwind.config.ts
 └── tsconfig.json
 
-216 directories, 356 files
-
-
-Dell Latitude 5550 processeur Intel Core Ultra 5-125U
+234 directories, 394 files
