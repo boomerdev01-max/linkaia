@@ -1,11 +1,16 @@
-// src/app/(auth)/company/documents/page.tsx 
-
+// app/(company)/company/org-profile/page.tsx
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
-import CompanyDocumentsUpload from "@/components/auth/CompanyDocumentsUpload";
+import CompanyOrgProfileForm from "@/components/auth/CompanyOrgProfileForm";
+import { Metadata } from "next";
 
-export default async function CompanyDocumentsPage() {
+export const metadata: Metadata = {
+  title: "Profil Organisation",
+  description: "Complétez le profil de votre organisation",
+};
+
+export default async function CompanyOrgProfilePage() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user: supabaseUser },
@@ -20,22 +25,29 @@ export default async function CompanyDocumentsPage() {
     include: { companyProfile: true },
   });
 
-  // ✅ On déduit le type depuis la présence de companyProfile
+  // Pas un compte entreprise → home
   if (!user || !user.companyProfile) {
     redirect("/home");
   }
 
+  // Email non vérifié → verify-email
   if (!user.emailVerified) {
     redirect(`/verify-email?email=${encodeURIComponent(user.email)}`);
   }
 
+  // Étapes précédentes non complétées → les renvoyer dans l'ordre
   if (!user.companyProfile.isLegalDetailsCompleted) {
     redirect("/company/legal-details");
   }
 
-  if (user.companyProfile.isDocumentsCompleted) {
+  if (!user.companyProfile.isDocumentsCompleted) {
+    redirect("/company/documents");
+  }
+
+  // Déjà complété (ou skippé) → home
+  if (user.companyProfile.isOrgProfileCompleted) {
     redirect("/home");
   }
 
-  return <CompanyDocumentsUpload />;
+  return <CompanyOrgProfileForm />;
 }

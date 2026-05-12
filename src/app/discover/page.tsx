@@ -16,14 +16,20 @@ export default async function DiscoverPage() {
 
   const user = await prisma.user.findUnique({
     where: { supabaseId: supabaseUser.id },
-    include: { profil: true },
+    include: {
+      profil: true,
+      companyProfile: true, // ✅ nécessaire pour détecter le type
+    },
   });
 
   if (!user) {
     redirect("/signin");
   }
 
-  if (!user.profil && !user.skipProfileSetup) {
+  // ✅ Les company_user n'ont pas de profil particulier — ne pas les rediriger
+  const isCompanyUser = user.companyProfile !== null;
+
+  if (!isCompanyUser && !user.profil && !user.skipProfileSetup) {
     redirect("/profile/setup");
   }
 
@@ -33,9 +39,10 @@ export default async function DiscoverPage() {
     prenom: user.prenom,
     pseudo:
       user.profil?.pseudo ||
+      user.companyProfile?.companyName ||
       `${user.prenom.toLowerCase()}.${user.nom.toLowerCase()}`,
     email: user.email,
-    image: user.profil?.profilePhotoUrl || null,
+    image: user.profil?.profilePhotoUrl || user.companyProfile?.logoUrl || null,
     roles: [],
   };
 

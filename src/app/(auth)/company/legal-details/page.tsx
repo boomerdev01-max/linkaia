@@ -1,3 +1,5 @@
+// src/app/(auth)/company/legal-details/page.tsx
+
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";

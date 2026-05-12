@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "company_profiles" ADD COLUMN     "annual_budget" DOUBLE PRECISION,
+ADD COLUMN     "annual_budget_currency" TEXT DEFAULT 'XOF',
+ADD COLUMN     "beneficiaries" TEXT,
+ADD COLUMN     "full_time_staff" INTEGER,
+ADD COLUMN     "is_org_profile_completed" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "main_donors" JSONB,
+ADD COLUMN     "main_mission" TEXT,
+ADD COLUMN     "main_unrestricted_fund_priority" TEXT,
+ADD COLUMN     "projects_description" TEXT,
+ADD COLUMN     "recent_accomplishments" TEXT,
+ADD COLUMN     "resource_mobilization_team" BOOLEAN,
+ADD COLUMN     "skip_org_profile_setup" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "social_media_presence" JSONB,
+ADD COLUMN     "women_count" INTEGER,
+ADD COLUMN     "women_in_leadership_percent" DOUBLE PRECISION;

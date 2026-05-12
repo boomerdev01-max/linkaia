@@ -1,3 +1,5 @@
+// src/app/api/auth/company/legal-details/route.ts
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -92,6 +94,41 @@ export async function POST(request: Request) {
     console.error("❌ Legal details error:", error);
     return NextResponse.json(
       { error: "Une erreur est survenue lors de l'enregistrement" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH() {
+  try {
+    const { user, error } = await getAuthenticatedUser();
+
+    if (!user || error) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    const fullUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { companyProfile: true },
+    });
+
+    if (!fullUser?.companyProfile) {
+      return NextResponse.json(
+        { error: "Profil entreprise introuvable" },
+        { status: 404 },
+      );
+    }
+
+    await prisma.companyProfile.update({
+      where: { userId: user.id },
+      data: { isLegalDetailsCompleted: false },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("❌ Legal details PATCH error:", error);
+    return NextResponse.json(
+      { error: "Une erreur est survenue" },
       { status: 500 },
     );
   }
