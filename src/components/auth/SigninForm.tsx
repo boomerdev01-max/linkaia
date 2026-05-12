@@ -88,7 +88,7 @@ export default function SigninForm() {
       }}
     >
       {/* ── TOP-LEFT: Logo + tagline (hidden on mobile) ── */}
-      <div className="absolute top-6 left-6 sm:top-8 sm:left-10 z-20 max-w-[220px] hidden sm:block">
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-10 z-20 max-w-55 hidden sm:block">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-2">
           <div
@@ -154,7 +154,7 @@ export default function SigninForm() {
       {/* ── RIGHT: Form card centered vertically ── */}
       <div className="relative z-10 min-h-screen flex items-center justify-end px-4 sm:px-10 lg:px-16 xl:px-24">
         <div
-          className="w-full sm:w-[390px] rounded-2xl p-7 sm:p-8"
+          className="w-full sm:w-97.5 rounded-2xl p-7 sm:p-8"
           style={{
             background: "rgba(255,255,255,0.98)",
             boxShadow:

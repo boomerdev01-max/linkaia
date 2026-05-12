@@ -1,3 +1,4 @@
+// src/components/auth/CompanyLegalDetailsForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -40,7 +41,10 @@ const REGISTRATION_TYPES = [
   { value: "SARL", label: "SARL (Société à Responsabilité Limitée)" },
   { value: "SAS", label: "SAS (Société par Actions Simplifiée)" },
   { value: "SASU", label: "SASU (SAS Unipersonnelle)" },
-  { value: "EURL", label: "EURL (Entreprise Unipersonnelle à Responsabilité Limitée)" },
+  {
+    value: "EURL",
+    label: "EURL (Entreprise Unipersonnelle à Responsabilité Limitée)",
+  },
   { value: "SA", label: "SA (Société Anonyme)" },
   { value: "SNC", label: "SNC (Société en Nom Collectif)" },
   { value: "SCS", label: "SCS (Société en Commandite Simple)" },
@@ -70,7 +74,6 @@ export default function CompanyLegalDetailsForm() {
     setErrors({});
     setLoading(true);
 
-    // Validation
     const newErrors: Record<string, string> = {};
     if (!formData.country) newErrors.country = "Le pays est requis";
     if (!formData.registrationType)
@@ -102,7 +105,7 @@ export default function CompanyLegalDetailsForm() {
 
       toast.success("Informations légales enregistrées avec succès");
       router.push("/company/documents");
-    } catch (error) {
+    } catch {
       toast.error("Une erreur est survenue");
     } finally {
       setLoading(false);
@@ -112,6 +115,7 @@ export default function CompanyLegalDetailsForm() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl">
+        {/* Header + stepper — inchangés */}
         <div className="text-center mb-8">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
             <Building2 className="h-8 w-8 text-primary" />
@@ -256,6 +260,7 @@ export default function CompanyLegalDetailsForm() {
             )}
           </div>
 
+          {/* ✅ Bouton unique — pas de "Précédent" ici (retour = déconnexion) */}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
               "Enregistrement..."

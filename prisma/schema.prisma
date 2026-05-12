@@ -1065,6 +1065,33 @@ model CompanyProfile {
   isLegalDetailsCompleted Boolean @default(false) @map("is_legal_details_completed")
   isDocumentsCompleted    Boolean @default(false) @map("is_documents_completed")
   
+  // === PROFIL ORGANISATION (Étape 4) ===
+  isOrgProfileCompleted   Boolean @default(false) @map("is_org_profile_completed")
+  skipOrgProfileSetup     Boolean @default(false) @map("skip_org_profile_setup")
+
+  // --- Chiffres clés ---
+  annualBudget            Float?    @map("annual_budget")
+  annualBudgetCurrency    String?   @default("XOF") @map("annual_budget_currency")
+  fullTimeStaff           Int?      @map("full_time_staff")
+  womenCount              Int?      @map("women_count")
+  womenInLeadershipPercent Float?   @map("women_in_leadership_percent")
+
+  // --- Mission & Projets ---
+  mainMission             String?   @map("main_mission") @db.Text
+  projectsDescription     String?   @map("projects_description") @db.Text
+  recentAccomplishments   String?   @map("recent_accomplishments") @db.Text
+  beneficiaries           String?   @map("beneficiaries") @db.Text
+
+  // --- Financement ---
+  mainDonors              Json?     @map("main_donors")
+  // Structure attendue : [{ name: string, amount: number, currency: string, year: number }]
+  mainUnrestrictedFundPriority String? @map("main_unrestricted_fund_priority") @db.Text
+  resourceMobilizationTeam Boolean? @map("resource_mobilization_team")
+
+  // --- Présence numérique ---
+  socialMediaPresence     Json?     @map("social_media_presence")
+  // Structure attendue : { linkedin?: string, facebook?: string, twitter?: string, website?: string, instagram?: string, youtube?: string }
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

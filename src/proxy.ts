@@ -1,4 +1,4 @@
-// proxy.ts - VERSION OPTIMISÉE AVEC CONFIG CENTRALISÉE
+// proxy.ts - VERSION CORRIGÉE
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { prisma } from "@/lib/prisma";
@@ -7,25 +7,6 @@ import {
   getPrimaryRole,
   getDefaultRouteForRole,
 } from "@/lib/roles-config";
-
-/**
- * 🔐 Récupère les rôles de l'utilisateur
- */
-async function getUserRoles(supabaseUserId: string): Promise<string[]> {
-  const user = await prisma.user.findUnique({
-    where: { supabaseId: supabaseUserId },
-    include: {
-      roles: {
-        include: {
-          role: true,
-        },
-      },
-    },
-  });
-
-  if (!user) return [];
-  return user.roles.map((userRole) => userRole.role.name);
-}
 
 /**
  * 🎯 Détermine si l'utilisateur est un admin
@@ -107,6 +88,8 @@ export async function proxy(request: NextRequest) {
         select: {
           isLegalDetailsCompleted: true,
           isDocumentsCompleted: true,
+          isOrgProfileCompleted: true,
+          skipOrgProfileSetup: true,
         },
       },
       roles: {
@@ -122,7 +105,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  // Déterminer les rôles de l'utilisateur
+  // Déterminer les rôles et le type d'utilisateur
   const userRoles = user.roles.map((userRole) => userRole.role.name);
   const isAdmin = hasAdminRole(userRoles);
   const primaryRole = getPrimaryRole(userRoles);
@@ -130,15 +113,17 @@ export async function proxy(request: NextRequest) {
     ? getDefaultRouteForRole(primaryRole)
     : "/home";
 
+  // ✅ Clé : est-ce un compte entreprise ?
+  const isCompanyUser = user.companyProfile !== null;
+
   console.log(
-    `👤 ${user.email} | Roles: [${userRoles.join(", ")}] | Primary: ${primaryRole} | IsAdmin: ${isAdmin}`,
+    `👤 ${user.email} | Roles: [${userRoles.join(", ")}] | Primary: ${primaryRole} | IsAdmin: ${isAdmin} | IsCompany: ${isCompanyUser}`,
   );
 
   // ============================================
   // GESTION UTILISATEURS ADMIN
   // ============================================
   if (isAdmin) {
-    // 1️⃣ Changement de mot de passe obligatoire
     if (user.mustChangePassword && pathname !== "/change-password") {
       console.log(
         `🔑 Admin must change password: ${pathname} → /change-password`,
@@ -148,17 +133,14 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    // 2️⃣ Déjà sur une page admin → OK
     if (pathname.startsWith("/admin")) {
       return response;
     }
 
-    // 3️⃣ Pages /change-password autorisées
     if (pathname.startsWith("/change-password")) {
       return response;
     }
 
-    // 4️⃣ Empêcher l'accès aux pages utilisateur standard
     const userOnlyPaths = [
       "/home",
       "/onboarding",
@@ -182,16 +164,101 @@ export async function proxy(request: NextRequest) {
   }
 
   // ============================================
-  // GESTION UTILISATEURS STANDARD/COMPANY
+  // BLOQUER ACCÈS ADMIN POUR NON-ADMINS
   // ============================================
-
-  // 🚫 Bloquer l'accès au panneau admin pour non-admins
   if (pathname.startsWith("/admin")) {
     console.log(`⛔ Non-admin blocked from /admin: ${user.email}`);
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
-  // === REDIRECTIONS DEPUIS SIGNIN/SIGNUP ===
+  // ============================================
+  // GESTION FLOW ENTREPRISE
+  // ✅ Traité EN PREMIER pour les company_users,
+  //    avant tout bloc onboarding particulier
+  // ============================================
+  if (isCompanyUser) {
+    // Email non vérifié
+    if (!user.emailVerified && !pathname.startsWith("/verify-email")) {
+      return NextResponse.redirect(
+        new URL(
+          `/verify-email?email=${encodeURIComponent(user.email)}`,
+          request.url,
+        ),
+      );
+    }
+
+    // Étape 2 — Détails légaux
+    if (
+      user.emailVerified &&
+      !user.companyProfile!.isLegalDetailsCompleted &&
+      !pathname.startsWith("/company/legal-details")
+    ) {
+      return NextResponse.redirect(
+        new URL("/company/legal-details", request.url),
+      );
+    }
+
+    // Étape 3 — Documents
+    if (
+      user.emailVerified &&
+      user.companyProfile!.isLegalDetailsCompleted &&
+      !user.companyProfile!.isDocumentsCompleted &&
+      !pathname.startsWith("/company/documents")
+    ) {
+      return NextResponse.redirect(new URL("/company/documents", request.url));
+    }
+
+    // Étape 4 — Profil organisation
+    if (
+      user.emailVerified &&
+      user.companyProfile!.isLegalDetailsCompleted &&
+      user.companyProfile!.isDocumentsCompleted &&
+      !user.companyProfile!.isOrgProfileCompleted &&
+      !user.companyProfile!.skipOrgProfileSetup &&
+      !pathname.startsWith("/company/org-profile")
+    ) {
+      return NextResponse.redirect(
+        new URL("/company/org-profile", request.url),
+      );
+    }
+
+    // Empêcher retour sur étapes déjà franchies
+    if (
+      user.companyProfile!.isDocumentsCompleted &&
+      (pathname.startsWith("/company/legal-details") ||
+        pathname.startsWith("/company/documents"))
+    ) {
+      if (
+        !user.companyProfile!.isOrgProfileCompleted &&
+        !user.companyProfile!.skipOrgProfileSetup
+      ) {
+        return NextResponse.redirect(
+          new URL("/company/org-profile", request.url),
+        );
+      }
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
+
+    // Empêcher retour sur org-profile si déjà complété/skippé
+    if (
+      (user.companyProfile!.isOrgProfileCompleted ||
+        user.companyProfile!.skipOrgProfileSetup) &&
+      pathname.startsWith("/company/org-profile")
+    ) {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
+
+    // ✅ Company user avec toutes les étapes franchies ou en cours :
+    //    on laisse passer — PAS de redirection vers onboarding particulier
+    return response;
+  }
+
+  // ============================================
+  // GESTION FLOW PARTICULIER (standard_user uniquement)
+  // ✅ Ce bloc ne s'exécute JAMAIS pour un company_user
+  // ============================================
+
+  // Redirections depuis signin/signup
   if (pathname === "/signin" || pathname === "/signup") {
     if (!user.isProfileCompleted && !user.skipProfileSetup) {
       return NextResponse.redirect(
@@ -213,7 +280,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
-  // === PROTECTION PAGES /HOME ===
+  // Protection pages /home
   if (pathname.startsWith("/home")) {
     if (!user.isProfileCompleted && !user.skipProfileSetup) {
       return NextResponse.redirect(
@@ -233,7 +300,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // === EMPÊCHER RETOUR ONBOARDING PROFIL SI COMPLÉTÉ ===
+  // Empêcher retour onboarding profil si complété
   if (
     pathname === "/onboarding/profile/welcome" ||
     pathname === "/onboarding/profile"
@@ -252,7 +319,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // === EMPÊCHER RETOUR ONBOARDING PRÉFÉRENCES SI COMPLÉTÉ ===
+  // Empêcher retour onboarding préférences si complété
   if (
     pathname === "/onboarding/preferences/welcome" ||
     pathname === "/onboarding/preferences"
@@ -269,50 +336,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(
         new URL("/onboarding/profile/welcome", request.url),
       );
-    }
-  }
-
-  // === GESTION FLOW ENTREPRISE ===
-  // companyProfile !== null suffit pour identifier un user COMPANY
-  if (user.companyProfile !== null) {
-    // Email non vérifié
-    if (!user.emailVerified && !pathname.startsWith("/verify-email")) {
-      return NextResponse.redirect(
-        new URL(
-          `/verify-email?email=${encodeURIComponent(user.email)}`,
-          request.url,
-        ),
-      );
-    }
-
-    // Détails légaux non complétés
-    if (
-      user.emailVerified &&
-      !user.companyProfile.isLegalDetailsCompleted &&
-      !pathname.startsWith("/company/legal-details")
-    ) {
-      return NextResponse.redirect(
-        new URL("/company/legal-details", request.url),
-      );
-    }
-
-    // Documents non uploadés
-    if (
-      user.emailVerified &&
-      user.companyProfile.isLegalDetailsCompleted &&
-      !user.companyProfile.isDocumentsCompleted &&
-      !pathname.startsWith("/company/documents")
-    ) {
-      return NextResponse.redirect(new URL("/company/documents", request.url));
-    }
-
-    // Tout complété → empêcher retour
-    if (
-      user.companyProfile.isDocumentsCompleted &&
-      (pathname.startsWith("/company/legal-details") ||
-        pathname.startsWith("/company/documents"))
-    ) {
-      return NextResponse.redirect(new URL("/home", request.url));
     }
   }
 

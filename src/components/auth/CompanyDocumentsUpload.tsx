@@ -163,7 +163,7 @@ export default function CompanyDocumentsUpload() {
 
           {/* Logo (optionnel) */}
           <div className="space-y-2">
-            <Label htmlFor="logo">Logo de l'organisation (optionnel)</Label>
+            <Label htmlFor="logo">Logo de l'organisation</Label>
             <div
               onClick={() => logoInputRef.current?.click()}
               className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
