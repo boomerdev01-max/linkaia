@@ -562,150 +562,298 @@ async function seedRBAC() {
   console.log("✅ Actions created");
 
   // ============================================
-// 4. MENUS
-// ============================================
-console.log("📋 Creating Menus...");
+  // 4. MENUS
+  // ============================================
+  console.log("📋 Creating Menus...");
 
-// ── Menus parents ──────────────────────────────────────────────────────────
+  // ── Menus parents ──────────────────────────────────────────────────────────
 
-const menuUsers = await prisma.menu.upsert({
-  where: { name: "Utilisateurs" },
-  update: { path: null, icon: "Users", order: 1 },
-  create: { name: "Utilisateurs", path: null, icon: "Users", order: 1 },
-});
+  const menuUsers = await prisma.menu.upsert({
+    where: { name: "Utilisateurs" },
+    update: { path: null, icon: "Users", order: 1 },
+    create: { name: "Utilisateurs", path: null, icon: "Users", order: 1 },
+  });
 
-const menuContent = await prisma.menu.upsert({
-  where: { name: "Gestion de contenu" },
-  update: { path: null, icon: "ImageIcon", order: 2 },
-  create: { name: "Gestion de contenu", path: null, icon: "ImageIcon", order: 2 },
-});
+  const menuContent = await prisma.menu.upsert({
+    where: { name: "Gestion de contenu" },
+    update: { path: null, icon: "ImageIcon", order: 2 },
+    create: {
+      name: "Gestion de contenu",
+      path: null,
+      icon: "ImageIcon",
+      order: 2,
+    },
+  });
 
-const menuServices = await prisma.menu.upsert({
-  where: { name: "Paiements" },
-  update: { path: null, icon: "CreditCard", order: 3 },
-  create: { name: "Paiements", path: null, icon: "CreditCard", order: 3 },
-});
+  const menuServices = await prisma.menu.upsert({
+    where: { name: "Paiements" },
+    update: { path: null, icon: "CreditCard", order: 3 },
+    create: { name: "Paiements", path: null, icon: "CreditCard", order: 3 },
+  });
 
-const menuStats = await prisma.menu.upsert({
-  where: { name: "Statistiques" },
-  update: { path: null, icon: "BarChart3", order: 4 },
-  create: { name: "Statistiques", path: null, icon: "BarChart3", order: 4 },
-});
+  const menuStats = await prisma.menu.upsert({
+    where: { name: "Statistiques" },
+    update: { path: null, icon: "BarChart3", order: 4 },
+    create: { name: "Statistiques", path: null, icon: "BarChart3", order: 4 },
+  });
 
-const menuComm = await prisma.menu.upsert({
-  where: { name: "Communication" },
-  update: { path: null, icon: "Bell", order: 5 },
-  create: { name: "Communication", path: null, icon: "Bell", order: 5 },
-});
+  const menuComm = await prisma.menu.upsert({
+    where: { name: "Communication" },
+    update: { path: null, icon: "Bell", order: 5 },
+    create: { name: "Communication", path: null, icon: "Bell", order: 5 },
+  });
 
-const menuConfig = await prisma.menu.upsert({
-  where: { name: "Paramètres" },
-  update: { path: null, icon: "Settings", order: 6 },
-  create: { name: "Paramètres", path: null, icon: "Settings", order: 6 },
-});
+  const menuConfig = await prisma.menu.upsert({
+    where: { name: "Paramètres" },
+    update: { path: null, icon: "Settings", order: 6 },
+    create: { name: "Paramètres", path: null, icon: "Settings", order: 6 },
+  });
 
-const menuFinance = await prisma.menu.upsert({
-  where: { name: "Finances" },
-  update: { path: null, icon: "Wallet", order: 7 },
-  create: { name: "Finances", path: null, icon: "Wallet", order: 7 },
-});
+  const menuFinance = await prisma.menu.upsert({
+    where: { name: "Finances" },
+    update: { path: null, icon: "Wallet", order: 7 },
+    create: { name: "Finances", path: null, icon: "Wallet", order: 7 },
+  });
 
-// ── Sous-menus : Utilisateurs ──────────────────────────────────────────────
+  // ── Sous-menus : Utilisateurs ──────────────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Profils utilisateurs" },
-  update: { path: "/admin/users/profiles", icon: "UserCheck", parentId: menuUsers.id, order: 1 },
-  create: { name: "Profils utilisateurs", path: "/admin/users/profiles", icon: "UserCheck", parentId: menuUsers.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Profils utilisateurs" },
+    update: {
+      path: "/admin/users/profiles",
+      icon: "UserCheck",
+      parentId: menuUsers.id,
+      order: 1,
+    },
+    create: {
+      name: "Profils utilisateurs",
+      path: "/admin/users/profiles",
+      icon: "UserCheck",
+      parentId: menuUsers.id,
+      order: 1,
+    },
+  });
 
-await prisma.menu.upsert({
-  where: { name: "Rôles et permissions" },
-  update: { path: "/admin/users/roles", icon: "Shield", parentId: menuUsers.id, order: 2 },
-  create: { name: "Rôles et permissions", path: "/admin/users/roles", icon: "Shield", parentId: menuUsers.id, order: 2 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Rôles et permissions" },
+    update: {
+      path: "/admin/users/roles",
+      icon: "Shield",
+      parentId: menuUsers.id,
+      order: 2,
+    },
+    create: {
+      name: "Rôles et permissions",
+      path: "/admin/users/roles",
+      icon: "Shield",
+      parentId: menuUsers.id,
+      order: 2,
+    },
+  });
 
-await prisma.menu.upsert({
-  where: { name: "Codes prestige" },
-  update: { path: "/admin/prestige-codes", icon: "Crown", parentId: menuUsers.id, order: 3 },
-  create: { name: "Codes prestige", path: "/admin/prestige-codes", icon: "Crown", parentId: menuUsers.id, order: 3 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Codes prestige" },
+    update: {
+      path: "/admin/prestige-codes",
+      icon: "Crown",
+      parentId: menuUsers.id,
+      order: 3,
+    },
+    create: {
+      name: "Codes prestige",
+      path: "/admin/prestige-codes",
+      icon: "Crown",
+      parentId: menuUsers.id,
+      order: 3,
+    },
+  });
 
-// ── Sous-menus : Gestion de contenu ───────────────────────────────────────
+  // ── Sous-menus : Gestion de contenu ───────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Médias en attente" },
-  update: { path: "/admin/content/pending-media", icon: "FileImage", parentId: menuContent.id, order: 1 },
-  create: { name: "Médias en attente", path: "/admin/content/pending-media", icon: "FileImage", parentId: menuContent.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Médias en attente" },
+    update: {
+      path: "/admin/content/pending-media",
+      icon: "FileImage",
+      parentId: menuContent.id,
+      order: 1,
+    },
+    create: {
+      name: "Médias en attente",
+      path: "/admin/content/pending-media",
+      icon: "FileImage",
+      parentId: menuContent.id,
+      order: 1,
+    },
+  });
 
-// 🆕 Posts publiés
-await prisma.menu.upsert({
-  where: { name: "Posts publiés" },
-  update: { path: "/admin/content/posts", icon: "FileText", parentId: menuContent.id, order: 2 },
-  create: { name: "Posts publiés", path: "/admin/content/posts", icon: "FileText", parentId: menuContent.id, order: 2 },
-});
+  // 🆕 Posts publiés
+  await prisma.menu.upsert({
+    where: { name: "Posts publiés" },
+    update: {
+      path: "/admin/content/posts",
+      icon: "FileText",
+      parentId: menuContent.id,
+      order: 2,
+    },
+    create: {
+      name: "Posts publiés",
+      path: "/admin/content/posts",
+      icon: "FileText",
+      parentId: menuContent.id,
+      order: 2,
+    },
+  });
 
-// 🆕 Vidéos
-await prisma.menu.upsert({
-  where: { name: "Vidéos" },
-  update: { path: "/admin/content/videos", icon: "Video", parentId: menuContent.id, order: 3 },
-  create: { name: "Vidéos", path: "/admin/content/videos", icon: "Video", parentId: menuContent.id, order: 3 },
-});
+  // 🆕 Vidéos
+  await prisma.menu.upsert({
+    where: { name: "Vidéos" },
+    update: {
+      path: "/admin/content/videos",
+      icon: "Video",
+      parentId: menuContent.id,
+      order: 3,
+    },
+    create: {
+      name: "Vidéos",
+      path: "/admin/content/videos",
+      icon: "Video",
+      parentId: menuContent.id,
+      order: 3,
+    },
+  });
 
-// ── Sous-menus : Paiements ─────────────────────────────────────────────────
+  // ── Sous-menus : Paiements ─────────────────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Transactions" },
-  update: { path: "/admin/services/transactions", icon: "Receipt", parentId: menuServices.id, order: 1 },
-  create: { name: "Transactions", path: "/admin/services/transactions", icon: "Receipt", parentId: menuServices.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Transactions" },
+    update: {
+      path: "/admin/services/transactions",
+      icon: "Receipt",
+      parentId: menuServices.id,
+      order: 1,
+    },
+    create: {
+      name: "Transactions",
+      path: "/admin/services/transactions",
+      icon: "Receipt",
+      parentId: menuServices.id,
+      order: 1,
+    },
+  });
 
-await prisma.menu.upsert({
-  where: { name: "Statistiques" },
-  update: { path: "/admin/services/statistics", icon: "TrendingUp", parentId: menuServices.id, order: 2 },
-  create: { name: "Statistiques", path: "/admin/services/statistics", icon: "TrendingUp", parentId: menuServices.id, order: 2 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Statistiques" },
+    update: {
+      path: "/admin/services/statistics",
+      icon: "TrendingUp",
+      parentId: menuServices.id,
+      order: 2,
+    },
+    create: {
+      name: "Statistiques",
+      path: "/admin/services/statistics",
+      icon: "TrendingUp",
+      parentId: menuServices.id,
+      order: 2,
+    },
+  });
 
-// ── Sous-menus : Statistiques ──────────────────────────────────────────────
+  // ── Sous-menus : Statistiques ──────────────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Revenus" },
-  update: { path: "/admin/stats/reports", icon: "TrendingUp", parentId: menuStats.id, order: 1 },
-  create: { name: "Revenus", path: "/admin/stats/reports", icon: "TrendingUp", parentId: menuStats.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Revenus" },
+    update: {
+      path: "/admin/stats/reports",
+      icon: "TrendingUp",
+      parentId: menuStats.id,
+      order: 1,
+    },
+    create: {
+      name: "Revenus",
+      path: "/admin/stats/reports",
+      icon: "TrendingUp",
+      parentId: menuStats.id,
+      order: 1,
+    },
+  });
 
-// ── Sous-menus : Communication ─────────────────────────────────────────────
+  // ── Sous-menus : Communication ─────────────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Notifications" },
-  update: { path: "/admin/communication/notifications", icon: "Mail", parentId: menuComm.id, order: 1 },
-  create: { name: "Notifications", path: "/admin/communication/notifications", icon: "Mail", parentId: menuComm.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Notifications" },
+    update: {
+      path: "/admin/communication/notifications",
+      icon: "Mail",
+      parentId: menuComm.id,
+      order: 1,
+    },
+    create: {
+      name: "Notifications",
+      path: "/admin/communication/notifications",
+      icon: "Mail",
+      parentId: menuComm.id,
+      order: 1,
+    },
+  });
 
-// ── Sous-menus : Paramètres ────────────────────────────────────────────────
+  // ── Sous-menus : Paramètres ────────────────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Administration" },
-  update: { path: "/admin/config/administration", icon: "Wrench", parentId: menuConfig.id, order: 1 },
-  create: { name: "Administration", path: "/admin/config/administration", icon: "Wrench", parentId: menuConfig.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Administration" },
+    update: {
+      path: "/admin/config/administration",
+      icon: "Wrench",
+      parentId: menuConfig.id,
+      order: 1,
+    },
+    create: {
+      name: "Administration",
+      path: "/admin/config/administration",
+      icon: "Wrench",
+      parentId: menuConfig.id,
+      order: 1,
+    },
+  });
 
-// 🆕 Règles & Confidentialité (regroupe CGU + Politique de confidentialité)
-await prisma.menu.upsert({
-  where: { name: "Règles & Confidentialité" },
-  update: { path: "/admin/config/legal", icon: "ScrollText", parentId: menuConfig.id, order: 2 },
-  create: { name: "Règles & Confidentialité", path: "/admin/config/legal", icon: "ScrollText", parentId: menuConfig.id, order: 2 },
-});
+  // 🆕 Règles & Confidentialité (regroupe CGU + Politique de confidentialité)
+  await prisma.menu.upsert({
+    where: { name: "Règles & Confidentialité" },
+    update: {
+      path: "/admin/config/legal",
+      icon: "ScrollText",
+      parentId: menuConfig.id,
+      order: 2,
+    },
+    create: {
+      name: "Règles & Confidentialité",
+      path: "/admin/config/legal",
+      icon: "ScrollText",
+      parentId: menuConfig.id,
+      order: 2,
+    },
+  });
 
-// ── Sous-menus : Finances ──────────────────────────────────────────────────
+  // ── Sous-menus : Finances ──────────────────────────────────────────────────
 
-await prisma.menu.upsert({
-  where: { name: "Demandes et factures" },
-  update: { path: "/admin/finance/invoices", icon: "Receipt", parentId: menuFinance.id, order: 1 },
-  create: { name: "Demandes et factures", path: "/admin/finance/invoices", icon: "Receipt", parentId: menuFinance.id, order: 1 },
-});
+  await prisma.menu.upsert({
+    where: { name: "Demandes et factures" },
+    update: {
+      path: "/admin/finance/invoices",
+      icon: "Receipt",
+      parentId: menuFinance.id,
+      order: 1,
+    },
+    create: {
+      name: "Demandes et factures",
+      path: "/admin/finance/invoices",
+      icon: "Receipt",
+      parentId: menuFinance.id,
+      order: 1,
+    },
+  });
 
-console.log("✅ Menus created");
+  console.log("✅ Menus created");
 
   // ============================================
   // 5. ROLE-PERMISSIONS
@@ -883,34 +1031,38 @@ console.log("✅ Menus created");
 
   const allMenus = await prisma.menu.findMany();
   const menuPermMap: Record<string, string[]> = {
-  // ── Utilisateurs ──
-  Utilisateurs:              ["user.read", "user.list"],
-  "Profils utilisateurs":    ["user.read", "user.profile"],
-  "Rôles et permissions":    ["role.read", "permission.manage"],
-  "Codes prestige":          ["prestige.manage"],
-  // ── Gestion de contenu ──
-  "Gestion de contenu":      ["post.read", "media.moderate"],
-  "Médias en attente":       ["media.moderate"],
-  "Posts publiés":           ["post.read", "post.moderate"],   // 🆕
-  "Vidéos":                  ["media.moderate"],                // 🆕
-  // ── Paiements ──
-  Paiements:                 ["transaction.read"],
-  Transactions:              ["transaction.read", "transaction.create"],
-  Statistiques:              ["statistics.view"],
-  // ── Stats ──
-  Rapports:                  ["reports.view"],
-  Revenus:                   ["reports.view", "reports.export"],
-  // ── Communication ──
-  Communication:             ["notification.send", "email.send"],
-  Notifications:             ["notification.send", "email.send"],
-  // ── Paramètres ──
-  Paramètres:                ["system.config"],
-  Administration:            ["system.config", "system.logs"],
-  "Règles & Confidentialité": ["system.config"],               // 🆕
-  // ── Finances ──
-  Finances:                  ["invoice.read"],
-  "Demandes et factures":    ["invoice.read", "invoice.create", "invoice.update"],
-};
+    // ── Utilisateurs ──
+    Utilisateurs: ["user.read", "user.list"],
+    "Profils utilisateurs": ["user.read", "user.profile"],
+    "Rôles et permissions": ["role.read", "permission.manage"],
+    "Codes prestige": ["prestige.manage"],
+    // ── Gestion de contenu ──
+    "Gestion de contenu": ["post.read", "media.moderate"],
+    "Médias en attente": ["media.moderate"],
+    "Posts publiés": ["post.read", "post.moderate"], // 🆕
+    Vidéos: ["media.moderate"], // 🆕
+    // ── Paiements ──
+    Paiements: ["transaction.read"],
+    Transactions: ["transaction.read", "transaction.create"],
+    Statistiques: ["statistics.view"],
+    // ── Stats ──
+    Rapports: ["reports.view"],
+    Revenus: ["reports.view", "reports.export"],
+    // ── Communication ──
+    Communication: ["notification.send", "email.send"],
+    Notifications: ["notification.send", "email.send"],
+    // ── Paramètres ──
+    Paramètres: ["system.config"],
+    Administration: ["system.config", "system.logs"],
+    "Règles & Confidentialité": ["system.config"], // 🆕
+    // ── Finances ──
+    Finances: ["invoice.read"],
+    "Demandes et factures": [
+      "invoice.read",
+      "invoice.create",
+      "invoice.update",
+    ],
+  };
 
   for (const menu of allMenus) {
     const permKeys = menuPermMap[menu.name] || [];
@@ -1963,7 +2115,8 @@ async function seedReferenceData() {
 async function seedTestUsers() {
   console.log("👥 Seeding Test Users...");
 
-  const { createSupabaseAuthUser } = await import("@/lib/supabase/admin-client");
+  const { createSupabaseAuthUser } =
+    await import("@/lib/supabase/admin-client");
   const { createClient } = await import("@supabase/supabase-js");
 
   const supabaseAdmin = createClient(
@@ -1973,27 +2126,72 @@ async function seedTestUsers() {
   );
 
   const defaultPassword = "Test@1234";
-  const hashedPassword  = await bcrypt.hash(defaultPassword, 10);
+  const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
   // ── 8 utilisateurs individuels FREE ───────────────────────────────────────
   const individualUsers = [
-    { nom: "Mensah",    prenom: "Kofi",      email: "kofi.mensah@test-linkaia.com",    gender: "man"   },
-    { nom: "Diallo",    prenom: "Fatoumata", email: "fatoumata.diallo@test-linkaia.com", gender: "woman" },
-    { nom: "Traoré",    prenom: "Moussa",    email: "moussa.traore@test-linkaia.com",   gender: "man"   },
-    { nom: "Dupont",    prenom: "Camille",   email: "camille.dupont@test-linkaia.com",  gender: "woman" },
-    { nom: "Nguyen",    prenom: "Linh",      email: "linh.nguyen@test-linkaia.com",     gender: "woman" },
-    { nom: "Okafor",    prenom: "Emeka",     email: "emeka.okafor@test-linkaia.com",    gender: "man"   },
-    { nom: "Benali",    prenom: "Yasmine",   email: "yasmine.benali@test-linkaia.com",  gender: "woman" },
-    { nom: "Fontaine",  prenom: "Lucas",     email: "lucas.fontaine@test-linkaia.com",  gender: "man"   },
+    {
+      nom: "Mensah",
+      prenom: "Kofi",
+      email: "kofi.mensah@test-linkaia.com",
+      gender: "man",
+    },
+    {
+      nom: "Diallo",
+      prenom: "Fatoumata",
+      email: "fatoumata.diallo@test-linkaia.com",
+      gender: "woman",
+    },
+    {
+      nom: "Traoré",
+      prenom: "Moussa",
+      email: "moussa.traore@test-linkaia.com",
+      gender: "man",
+    },
+    {
+      nom: "Dupont",
+      prenom: "Camille",
+      email: "camille.dupont@test-linkaia.com",
+      gender: "woman",
+    },
+    {
+      nom: "Nguyen",
+      prenom: "Linh",
+      email: "linh.nguyen@test-linkaia.com",
+      gender: "woman",
+    },
+    {
+      nom: "Okafor",
+      prenom: "Emeka",
+      email: "emeka.okafor@test-linkaia.com",
+      gender: "man",
+    },
+    {
+      nom: "Benali",
+      prenom: "Yasmine",
+      email: "yasmine.benali@test-linkaia.com",
+      gender: "woman",
+    },
+    {
+      nom: "Fontaine",
+      prenom: "Lucas",
+      email: "lucas.fontaine@test-linkaia.com",
+      gender: "man",
+    },
   ];
 
   // Récupérer le rôle standard_user
-  const standardRole = await prisma.role.findUnique({ where: { name: "standard_user" } });
-  if (!standardRole) throw new Error("❌ Role 'standard_user' not found — run seedRBAC first");
+  const standardRole = await prisma.role.findUnique({
+    where: { name: "standard_user" },
+  });
+  if (!standardRole)
+    throw new Error("❌ Role 'standard_user' not found — run seedRBAC first");
 
   for (const u of individualUsers) {
     // Vérifier si l'user existe déjà en base
-    const existing = await prisma.user.findUnique({ where: { email: u.email } });
+    const existing = await prisma.user.findUnique({
+      where: { email: u.email },
+    });
     if (existing) {
       console.log(`⏭️  Skipping existing user: ${u.email}`);
       continue;
@@ -2019,7 +2217,10 @@ async function seedTestUsers() {
         // Récupérer l'id Supabase existant
         const { data } = await supabaseAdmin.auth.admin.listUsers();
         const found = data?.users?.find((su) => su.email === u.email);
-        if (!found) { console.warn(`⚠️  Cannot recover Supabase user for ${u.email}`); continue; }
+        if (!found) {
+          console.warn(`⚠️  Cannot recover Supabase user for ${u.email}`);
+          continue;
+        }
         supabaseId = found.id;
       } else {
         throw err;
@@ -2029,54 +2230,63 @@ async function seedTestUsers() {
     // Créer l'User Prisma
     const newUser = await prisma.user.create({
       data: {
-        nom:              u.nom,
-        prenom:           u.prenom,
-        email:            u.email,
-        password:         hashedPassword,
-        supabaseId:       supabaseId,
-        provider:         "email",
-        emailVerified:    true,
-        adminCreated:     true,
-        isFirstLogin:     false,
+        nom: u.nom,
+        prenom: u.prenom,
+        email: u.email,
+        password: hashedPassword,
+        supabaseId: supabaseId,
+        provider: "email",
+        emailVerified: true,
+        adminCreated: true,
+        isFirstLogin: false,
         mustChangePassword: false,
-        level:            "FREE",
+        level: "FREE",
       },
     });
 
     // Assigner le rôle
     await prisma.userRole.upsert({
-      where:  { userId_roleId: { userId: newUser.id, roleId: standardRole.id } },
+      where: { userId_roleId: { userId: newUser.id, roleId: standardRole.id } },
       update: {},
       create: { userId: newUser.id, roleId: standardRole.id },
     });
 
     // Créer un profil minimal (pseudo = prenom + nom, genre)
     await prisma.profil.upsert({
-      where:  { userId: newUser.id },
+      where: { userId: newUser.id },
       update: {},
       create: {
-        userId:  newUser.id,
-        pseudo:  `${u.prenom.toLowerCase()}_${u.nom.toLowerCase()}`,
-        gender:  u.gender,
+        userId: newUser.id,
+        pseudo: `${u.prenom.toLowerCase()}_${u.nom.toLowerCase()}`,
+        gender: u.gender,
       },
     });
 
     // Créer un wallet vide
     await prisma.wallet.upsert({
-      where:  { userId: newUser.id },
+      where: { userId: newUser.id },
       update: {},
       create: { userId: newUser.id, lgemsBalance: 0, diamondsBalance: 0 },
     });
 
-    console.log(`✅ Created individual user: ${u.prenom} ${u.nom} <${u.email}>`);
+    console.log(
+      `✅ Created individual user: ${u.prenom} ${u.nom} <${u.email}>`,
+    );
   }
 
   // ── 1 utilisateur entreprise ───────────────────────────────────────────────
   const companyEmail = "contact@afrique-tech.test-linkaia.com";
-  const companyRole  = await prisma.role.findUnique({ where: { name: "company_user" } });
-  if (!companyRole) throw new Error("❌ Role 'company_user' not found — run seedCompanyRoles first");
+  const companyRole = await prisma.role.findUnique({
+    where: { name: "company_user" },
+  });
+  if (!companyRole)
+    throw new Error(
+      "❌ Role 'company_user' not found — run seedCompanyRoles first",
+    );
 
-  const existingCompany = await prisma.user.findUnique({ where: { email: companyEmail } });
+  const existingCompany = await prisma.user.findUnique({
+    where: { email: companyEmail },
+  });
 
   if (existingCompany) {
     console.log(`⏭️  Skipping existing company user: ${companyEmail}`);
@@ -2099,7 +2309,8 @@ async function seedTestUsers() {
       if (err?.message?.includes("User already registered")) {
         const { data } = await supabaseAdmin.auth.admin.listUsers();
         const found = data?.users?.find((su) => su.email === companyEmail);
-        if (!found) throw new Error(`Cannot recover Supabase user for ${companyEmail}`);
+        if (!found)
+          throw new Error(`Cannot recover Supabase user for ${companyEmail}`);
         companySupabaseId = found.id;
       } else {
         throw err;
@@ -2108,53 +2319,247 @@ async function seedTestUsers() {
 
     const companyUser = await prisma.user.create({
       data: {
-        nom:               "AfriTech",
-        prenom:            "Solutions",
-        email:             companyEmail,
-        password:          hashedPassword,
-        supabaseId:        companySupabaseId,
-        provider:          "email",
-        emailVerified:     true,
-        adminCreated:      true,
-        isFirstLogin:      false,
+        nom: "AfriTech",
+        prenom: "Solutions",
+        email: companyEmail,
+        password: hashedPassword,
+        supabaseId: companySupabaseId,
+        provider: "email",
+        emailVerified: true,
+        adminCreated: true,
+        isFirstLogin: false,
         mustChangePassword: false,
-        level:             "FREE",
+        level: "FREE",
       },
     });
 
     await prisma.userRole.upsert({
-      where:  { userId_roleId: { userId: companyUser.id, roleId: companyRole.id } },
+      where: {
+        userId_roleId: { userId: companyUser.id, roleId: companyRole.id },
+      },
       update: {},
       create: { userId: companyUser.id, roleId: companyRole.id },
     });
 
     // Profil entreprise
     await prisma.companyProfile.upsert({
-      where:  { userId: companyUser.id },
+      where: { userId: companyUser.id },
       update: {},
       create: {
-        userId:      companyUser.id,
+        userId: companyUser.id,
         companyName: "AfriTech Solutions",
-        legalEmail:  companyEmail,
-        country:     "BJ",
-        status:      "PENDING",
+        legalEmail: companyEmail,
+        country: "BJ",
+        status: "PENDING",
         isLegalDetailsCompleted: false,
-        isDocumentsCompleted:    false,
+        isDocumentsCompleted: false,
       },
     });
 
     // Wallet entreprise
     await prisma.wallet.upsert({
-      where:  { userId: companyUser.id },
+      where: { userId: companyUser.id },
       update: {},
       create: { userId: companyUser.id, lgemsBalance: 0, diamondsBalance: 0 },
     });
 
-    console.log(`✅ Created company user: AfriTech Solutions <${companyEmail}>`);
+    console.log(
+      `✅ Created company user: AfriTech Solutions <${companyEmail}>`,
+    );
   }
 
   console.log("🎉 Test users seeding complete!");
   console.log("🔑 All test accounts password: Test@1234");
+}
+
+async function seedTestPosts() {
+  console.log("📝 Seeding Test Posts...");
+
+  // Récupérer les catégories
+  const categories = await prisma.postCategory.findMany({
+    orderBy: { order: "asc" },
+  });
+  if (categories.length === 0)
+    throw new Error(
+      "❌ No post categories found — run seedPostCategories first",
+    );
+
+  // Récupérer les utilisateurs de test (les 8 individuels + la company)
+  const testEmails = [
+    "kofi.mensah@test-linkaia.com",
+    "fatoumata.diallo@test-linkaia.com",
+    "moussa.traore@test-linkaia.com",
+    "camille.dupont@test-linkaia.com",
+    "linh.nguyen@test-linkaia.com",
+    "emeka.okafor@test-linkaia.com",
+    "yasmine.benali@test-linkaia.com",
+    "lucas.fontaine@test-linkaia.com",
+    "contact@afrique-tech.test-linkaia.com",
+  ];
+
+  const users = await prisma.user.findMany({
+    where: { email: { in: testEmails } },
+    select: { id: true, email: true },
+  });
+
+  if (users.length === 0)
+    throw new Error("❌ No test users found — run seedTestUsers first");
+
+  // Contenu des posts : 2 par catégorie
+  const postsData: Record<string, { content: string; visibility: string }[]> = {
+    culture: [
+      {
+        content:
+          "Je viens de visiter l'exposition sur les masques Yoruba au musée de Cotonou — une plongée fascinante dans l'histoire de l'Afrique de l'Ouest. L'art traditionnel mérite vraiment d'être préservé et valorisé.",
+        visibility: "public",
+      },
+      {
+        content:
+          "La musique afrobeat transcende les frontières. Hier soir au concert, j'ai vu des personnes de 12 nationalités différentes danser ensemble au même rythme. C'est ça, la magie de la culture.",
+        visibility: "public",
+      },
+    ],
+    voyage: [
+      {
+        content:
+          "Marrakech en novembre, c'est magique. Les souks, les odeurs d'épices, le soleil encore chaud... Si vous n'êtes jamais allés, c'est le moment parfait pour y aller avant la haute saison.",
+        visibility: "public",
+      },
+      {
+        content:
+          "Road trip Dakar → Abidjan en voiture. 3 pays, 5 jours, des rencontres inoubliables. Parfois le trajet vaut autant que la destination. ✈️🌍",
+        visibility: "public",
+      },
+    ],
+    lifestyle: [
+      {
+        content:
+          "Je me suis enfin lancé dans le minimalisme. Donner la moitié de mes affaires m'a libéré d'un poids que je ne savais même pas que je portais. Essayez, vous m'en direz des nouvelles.",
+        visibility: "public",
+      },
+      {
+        content:
+          "Le matin sans téléphone pendant la première heure change vraiment la journée. Ça fait 3 semaines que je teste — je suis plus concentré, moins anxieux. Quelqu'un d'autre a essayé ?",
+        visibility: "public",
+      },
+    ],
+    famille_valeurs: [
+      {
+        content:
+          "Élever ses enfants dans deux cultures à la fois, c'est un défi magnifique. Mon fils de 7 ans passe d'un français impeccable à du fon en une fraction de seconde. La richesse est là.",
+        visibility: "public",
+      },
+      {
+        content:
+          "Dans notre famille, on a instauré un dîner sans écran le vendredi soir. Trois mois plus tard, c'est devenu le moment préféré de tout le monde. Les valeurs se construisent dans les petits rituels.",
+        visibility: "public",
+      },
+    ],
+    spiritualite: [
+      {
+        content:
+          "La prière du matin n'est pas une obligation pour moi, c'est un ancrage. Avant le bruit du monde, cinq minutes de silence et de gratitude changent toute la trajectoire de la journée.",
+        visibility: "public",
+      },
+      {
+        content:
+          "J'ai relu le livre de Job cette semaine. Les questions qu'il pose sur la souffrance et la foi sont d'une modernité déconcertante. Certains textes anciens parlent mieux de notre époque que les analyses contemporaines.",
+        visibility: "public",
+      },
+    ],
+    cuisine: [
+      {
+        content:
+          "J'ai cuisiné un thiéboudienne pour la première fois de ma vie. Deux heures de préparation, une recette transmise par une amie sénégalaise, et un résultat qui a fait pleurer de joie ma grand-mère. La cuisine, c'est de la mémoire.",
+        visibility: "public",
+      },
+      {
+        content:
+          "La sauce graine au crabe, le riz bien collé, le piment dosé juste comme il faut... Le repas du dimanche chez ma mère restera toujours le meilleur restaurant du monde.",
+        visibility: "public",
+      },
+    ],
+    mode_beaute: [
+      {
+        content:
+          "Le wax ne se démode pas, il se réinvente. J'ai vu des créateurs béninois mixer tissu traditionnel et coupe contemporaine avec un résultat époustouflant. La mode africaine est en train de conquérir les podiums mondiaux.",
+        visibility: "public",
+      },
+      {
+        content:
+          "Après des années à lisser mes cheveux, j'ai décidé d'assumer mes boucles naturelles. Ce n'est pas juste un changement capillaire — c'est une déclaration d'identité. Et franchement, je ne reviendrai jamais en arrière.",
+        visibility: "public",
+      },
+    ],
+    humour: [
+      {
+        content:
+          "Mon boss m'a demandé d'être plus 'proactif'. J'ai commandé mon café avant qu'il soit prêt. On fait ce qu'on peut. ☕😅",
+        visibility: "public",
+      },
+      {
+        content:
+          "Les réunions qui auraient pu être un email, les emails qui auraient pu être un message, les messages qui auraient pu être un regard... À ce stade je communique par télépathie.",
+        visibility: "public",
+      },
+    ],
+    actualite: [
+      {
+        content:
+          "L'essor des fintechs en Afrique subsaharienne est impressionnant. En moins de 5 ans, des millions de personnes sans compte bancaire ont accès à des services financiers via leur téléphone. C'est une révolution silencieuse mais profonde.",
+        visibility: "public",
+      },
+      {
+        content:
+          "Les jeunes africains représentent plus de 60% de la population du continent. Ce n'est pas une contrainte démographique — c'est un capital humain colossal si les infrastructures suivent. L'avenir se joue maintenant.",
+        visibility: "public",
+      },
+    ],
+    sport_bienetre: [
+      {
+        content:
+          "Première sortie running à 6h du matin après 6 mois d'inactivité. 4 km, les jambes en feu, le sourire aux lèvres. Le corps se souvient toujours. Retour progressif, mais le retour quand même.",
+        visibility: "public",
+      },
+      {
+        content:
+          "Le yoga m'a appris quelque chose que le sport de compétition ne m'avait jamais enseigné : écouter son corps au lieu de le forcer. À 32 ans, j'aurais aimé comprendre ça plus tôt.",
+        visibility: "public",
+      },
+    ],
+  };
+
+  let createdCount = 0;
+  let userIndex = 0;
+
+  for (const category of categories) {
+    const categoryPosts = postsData[category.code];
+    if (!categoryPosts) {
+      console.warn(`⚠️  No posts data for category: ${category.code}`);
+      continue;
+    }
+
+    for (const postData of categoryPosts) {
+      // Attribution circulaire aux users
+      const author = users[userIndex % users.length];
+      userIndex++;
+
+      await prisma.post.create({
+        data: {
+          authorId: author.id,
+          content: postData.content,
+          visibility: postData.visibility,
+          categoryId: category.id,
+        },
+      });
+
+      createdCount++;
+    }
+  }
+
+  console.log(
+    `✅ ${createdCount} test posts created across ${categories.length} categories`,
+  );
 }
 
 async function main() {
@@ -2174,6 +2579,7 @@ async function main() {
   await seedWalletData(prisma); // 10️⃣ Wallet & cadeaux
   await seedPostCategories(); // 11 Smart Feed
   await seedTestUsers(); // 12️⃣ Utilisateurs de test
+  await seedTestPosts(); // 13️⃣ Posts de test
 
   console.log("🎉 Seed completed successfully!");
 }

@@ -16,8 +16,7 @@ import {
 import UserProfileButton from "./UserProfileButton";
 import { UserSearchModal } from "@/components/chat/UserSearchModal";
 import { useUnreadMessages } from "@/hooks/use-unread-messages";
-import { WalletBadge } from "@/components/wallet/WalletBadge"; 
-import { useGiftNotifications } from "@/hooks/useGiftNotifications"; // ← NOUVEAU
+import { useGiftNotifications } from "@/hooks/useGiftNotifications";
 
 interface User {
   id: string;
@@ -31,9 +30,15 @@ interface User {
 interface HeaderProps {
   user: User;
   notificationCount?: number;
+  // ✅ NOUVEAU
+  isCompanyUser?: boolean;
 }
 
-export default function Header({ user, notificationCount = 0 }: HeaderProps) {
+export default function Header({
+  user,
+  notificationCount = 0,
+  isCompanyUser = false,
+}: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -43,15 +48,16 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
     userId: user.id,
   });
 
-  // ── Notifications cadeaux reçus (toast temps réel) ──────────────────────
-  // S'abonne au canal Supabase Realtime `user:{id}` et affiche un toast
-  // à chaque cadeau reçu, même hors live. Se déconnecte au unmount.
-  useGiftNotifications(user.id); // ← NOUVEAU
+  useGiftNotifications(user.id);
 
-  const navItems = [
+  // ✅ Items de navigation — "Rencontres" masqué pour les company_user
+  const allNavItems = [
     { icon: Home, label: "Accueil", path: "/home" },
     { icon: Sparkles, label: "Decouvrir", path: "/discover" },
-    { icon: Users, label: "Rencontres", path: "/suggestions" },
+    // ✅ "Rencontres" filtré selon le type d'utilisateur
+    ...(!isCompanyUser
+      ? [{ icon: Users, label: "Rencontres", path: "/suggestions" }]
+      : []),
     { icon: PlayCircle, label: "Videos", path: "/videos" },
     { icon: Calendar, label: "Evenements", path: "/my-stats" },
   ];
@@ -92,7 +98,7 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
 
         {/* Navigation centrale */}
         <nav className="hidden md:flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const isActive = pathname === item.path;
             return (
               <button
@@ -118,12 +124,6 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
 
         {/* Actions droite */}
         <div className="flex items-center gap-2 md:gap-3">
-          {/* ── Badge solde L-Gems ─────────────────────────────────────── */}
-          {/* Affiché uniquement sur md+ pour ne pas écraser le mobile     */}
-          {/* <div className="hidden md:block">
-            <WalletBadge variant="compact" />
-          </div>*/}
-
           {/* Notifications */}
           <button
             type="button"
@@ -154,8 +154,8 @@ export default function Header({ user, notificationCount = 0 }: HeaderProps) {
             )}
           </button>
 
-          {/* Avatar */}
-          <UserProfileButton user={user} />
+          {/* ✅ isCompanyUser passé à UserProfileButton */}
+          <UserProfileButton user={user} isCompanyUser={isCompanyUser} />
         </div>
       </header>
 

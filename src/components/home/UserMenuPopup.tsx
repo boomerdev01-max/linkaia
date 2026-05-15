@@ -14,8 +14,9 @@ import {
   CreditCard,
   Sparkles,
   Crown,
-  Wallet, // ← NOUVEAU
-  Zap, // ← NOUVEAU (icône Recharger)
+  Wallet,
+  Zap,
+  Building2,
 } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 
@@ -31,24 +32,33 @@ interface UserMenuPopupProps {
   };
   onLogoutClick: () => void;
   onClose?: () => void;
+  // ✅ NOUVEAU
+  isCompanyUser?: boolean;
 }
 
 export default function UserMenuPopup({
   user,
   onLogoutClick,
   onClose,
+  isCompanyUser = false,
 }: UserMenuPopupProps) {
-  // Solde L-Gems pour l'afficher dans l'entrée wallet
   const { balance } = useWalletBalance();
 
+  // ✅ Items filtrés selon le type d'utilisateur
+  // Les company_user n'ont pas accès aux suggestions de matching
   const menuItems = [
-    {
-      icon: Sparkles,
-      label: "Suggestions",
-      href: "/suggestions",
-      badge: "Matchs",
-      highlight: true,
-    },
+    // Masqué pour les entreprises
+    ...(!isCompanyUser
+      ? [
+          {
+            icon: Sparkles,
+            label: "Suggestions",
+            href: "/suggestions",
+            badge: "Matchs",
+            highlight: true,
+          },
+        ]
+      : []),
     {
       icon: Crown,
       label: "Club fermé LWB",
@@ -57,7 +67,6 @@ export default function UserMenuPopup({
       highlight: true,
       clubExclusive: true,
     },
-    // ── WALLET ─────────────────────────────────────────────────────────────
     {
       icon: Wallet,
       label: "Mon Wallet",
@@ -74,7 +83,6 @@ export default function UserMenuPopup({
       highlight: false,
       isRecharge: true,
     },
-    // ───────────────────────────────────────────────────────────────────────
     {
       icon: Shield,
       label: "Confidentialité",
@@ -121,6 +129,11 @@ export default function UserMenuPopup({
     },
   ];
 
+  // ✅ URL du profil selon le type d'utilisateur
+  const profileHref = isCompanyUser ? `/company/${user.id}` : `/profile/${user.id}`;
+  const profileIcon = isCompanyUser ? Building2 : User;
+  const profileLabel = isCompanyUser ? "Voir mon profil organisation" : "Voir mon profil complet";
+
   return (
     <div className="w-80 bg-white dark:bg-gray-900 shadow-xl rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
       {/* Header */}
@@ -138,32 +151,46 @@ export default function UserMenuPopup({
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <span className="text-white font-bold text-base">
-                  {user.prenom.charAt(0)}
-                  {user.nom.charAt(0)}
+                  {/* ✅ Pour les entreprises, afficher l'initiale du nom de société */}
+                  {isCompanyUser
+                    ? user.nom.charAt(0).toUpperCase()
+                    : `${user.prenom.charAt(0)}${user.nom.charAt(0)}`}
                 </span>
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-white truncate">
-              {user.prenom} {user.nom}
+              {isCompanyUser ? user.nom : `${user.prenom} ${user.nom}`}
             </h3>
+            {/* ✅ Badge entreprise */}
+            {isCompanyUser && (
+              <span className="inline-flex items-center gap-1 text-xs text-[#0F4C5C] dark:text-[#B88A4F] font-medium">
+                <Building2 className="w-3 h-3" />
+                Compte Organisation
+              </span>
+            )}
           </div>
         </div>
+
+        {/* ✅ Bouton profil adapté */}
         <Link
-          href={`/profile/${user.id}`}
+          href={profileHref}
           onClick={onClose}
           className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0F4C5C] hover:bg-[#0a3540] text-white font-medium rounded-lg transition-colors text-sm"
         >
-          <User className="w-4 h-4" />
-          Voir mon profil complet
+          {isCompanyUser ? (
+            <Building2 className="w-4 h-4" />
+          ) : (
+            <User className="w-4 h-4" />
+          )}
+          {profileLabel}
         </Link>
       </div>
 
       {/* Menu items */}
       <div className="max-h-105 overflow-y-auto">
         {menuItems.map((item, index) => {
-          // Déconnexion
           if (item.isLogout) {
             return (
               <button
@@ -256,37 +283,13 @@ export default function UserMenuPopup({
       {/* Footer légal */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 justify-center">
-          <Link
-            href="/privacy"
-            onClick={onClose}
-            className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors"
-          >
-            Confidentialité
-          </Link>
+          <Link href="/privacy" onClick={onClose} className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors">Confidentialité</Link>
           <span>•</span>
-          <Link
-            href="/terms"
-            onClick={onClose}
-            className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors"
-          >
-            Conditions
-          </Link>
+          <Link href="/terms" onClick={onClose} className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors">Conditions</Link>
           <span>•</span>
-          <Link
-            href="/cookies"
-            onClick={onClose}
-            className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors"
-          >
-            Cookies
-          </Link>
+          <Link href="/cookies" onClick={onClose} className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors">Cookies</Link>
           <span>•</span>
-          <Link
-            href="/about"
-            onClick={onClose}
-            className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors"
-          >
-            À propos
-          </Link>
+          <Link href="/about" onClick={onClose} className="hover:text-[#0F4C5C] dark:hover:text-[#B88A4F] transition-colors">À propos</Link>
         </div>
       </div>
     </div>
