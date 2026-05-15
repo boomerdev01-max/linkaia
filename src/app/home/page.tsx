@@ -18,7 +18,7 @@ export default async function HomePage() {
     where: { supabaseId: supabaseUser.id },
     include: {
       profil: true,
-      companyProfile: true, // ✅ nécessaire pour détecter le type
+      companyProfile: true,
     },
   });
 
@@ -26,7 +26,6 @@ export default async function HomePage() {
     redirect("/signin");
   }
 
-  // ✅ Les company_user n'ont pas de profil particulier — ne pas les rediriger
   const isCompanyUser = user.companyProfile !== null;
 
   if (!isCompanyUser && !user.profil && !user.skipProfileSetup) {
@@ -44,6 +43,8 @@ export default async function HomePage() {
     email: user.email,
     image: user.profil?.profilePhotoUrl || user.companyProfile?.logoUrl || null,
     roles: [],
+    // ✅ NOUVEAU — indique si c'est un compte entreprise
+    isCompanyUser,
   };
 
   return <HomeClient user={userData} />;
