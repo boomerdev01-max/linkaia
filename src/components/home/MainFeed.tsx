@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import PostComposer from "./PostComposer";
 import StoryCarousel from "./StoryCarousel";
 import PostCard from "./PostCard";
+import AdCard from "./AdCard";
 import { Loader2, Sparkles, LayoutList } from "lucide-react";
 import { usePostViewTracker } from "@/hooks/use-post-view-tracker";
 import { usePostHogTracking } from "@/hooks/usePostHogTracking";
@@ -24,8 +25,8 @@ interface Post {
   visibility: string;
   createdAt: string;
   editedAt: string | null;
-  categoryCode: string | null; // ✨
-  category: { code: string; label: string; emoji: string } | null; // ✨
+  categoryCode: string | null;
+  category: { code: string; label: string; emoji: string } | null;
   author: {
     id: string;
     nom: string;
@@ -39,6 +40,20 @@ interface Post {
   } | null;
   reactionCounts: Record<string, number>;
   _count: { reactions: number; comments: number };
+}
+
+interface AdData {
+  campaignId: string;
+  creative: {
+    title: string;
+    body: string;
+    imageUrl: string | null;
+    ctaLabel: string;
+    ctaUrl: string | null;
+    targetProfileId: string | null;
+  };
+  objective: string;
+  billingModel: string;
 }
 
 interface PaginationInfo {
@@ -67,20 +82,16 @@ function TrackedPostCard({
 }) {
   const { trackPostView } = usePostHogTracking();
 
-  // Le hook existant gère déjà le POST /api/posts/[id]/view
-  // On y ajoute juste le tracking PostHog
   const ref = usePostViewTracker({
     postId: post.id,
     disabled: post.author.id === currentUserId,
     delay: 1500,
   });
 
-  // Tracker PostHog à la première vue (synchronisé avec le hook)
   const hasTrackedPH = useRef(false);
   useEffect(() => {
     if (hasTrackedPH.current || post.author.id === currentUserId) return;
     const timer = setTimeout(() => {
-      // On vérifie que l'élément est toujours dans le DOM
       if (ref.current) {
         trackPostView(post.id, post.categoryCode);
         hasTrackedPH.current = true;
@@ -107,8 +118,8 @@ export default function MainFeed({ user }: MainFeedProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [smartFeed, setSmartFeed] = useState(false); // ✨ toggle feed intelligent
-  const [isSmartActive, setIsSmartActive] = useState(false); // ✨ état réel retourné par l'API
+  const [smartFeed, setSmartFeed] = useState(false);
+  const [isSmartActive, setIsSmartActive] = useState(false);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 5,
@@ -116,6 +127,22 @@ export default function MainFeed({ user }: MainFeedProps) {
     totalPages: 0,
     hasMore: false,
   });
+
+  // ── Pub ──────────────────────────────────────────────────────────────────────
+  const [currentAd, setCurrentAd] = useState<AdData | null>(null);
+  // On insère une pub toutes les AD_INTERVAL publications
+  const AD_INTERVAL = 5;
+
+  const fetchAd = async () => {
+    try {
+      const res = await fetch("/api/ads/serve");
+      if (!res.ok) return;
+      const data = await res.json();
+      setCurrentAd(data.ad ?? null);
+    } catch {
+      // silencieux — la pub ne doit jamais bloquer le feed
+    }
+  };
 
   const fetchPosts = async (
     page = 1,
@@ -128,7 +155,7 @@ export default function MainFeed({ user }: MainFeedProps) {
       const params = new URLSearchParams({
         page: String(page),
         limit: "5",
-        smart: String(useSmartFeed), // ✨
+        smart: String(useSmartFeed),
       });
 
       const response = await fetch(`/api/posts?${params}`);
@@ -164,9 +191,9 @@ export default function MainFeed({ user }: MainFeedProps) {
 
   useEffect(() => {
     fetchPosts(1, false);
+    fetchAd(); // Charger une pub dès le départ
   }, []);
 
-  // ✨ Quand l'utilisateur bascule le feed intelligent
   const handleToggleSmartFeed = () => {
     const next = !smartFeed;
     setSmartFeed(next);
@@ -178,11 +205,14 @@ export default function MainFeed({ user }: MainFeedProps) {
   const handlePostDelete = (id: string) =>
     setPosts((prev) => prev.filter((p) => p.id !== id));
   const loadMorePosts = () => {
-    if (pagination.hasMore && !loadingMore)
+    if (pagination.hasMore && !loadingMore) {
       fetchPosts(pagination.page + 1, true);
+      // Rafraîchir la pub au chargement de la page suivante
+      fetchAd();
+    }
   };
 
-  // ── Skeleton de chargement (identique à l'original) ─────────────────────
+  // ── Skeleton de chargement ───────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="w-full space-y-6">
@@ -238,12 +268,32 @@ export default function MainFeed({ user }: MainFeedProps) {
     );
   }
 
+  // ── Rendu du feed avec injection publicitaire ────────────────────────────────
+  /**
+   * On construit une liste d'éléments à rendre :
+   * posts[0], posts[1], posts[2], posts[3], posts[4], <AdCard>, posts[5], ...
+   * La pub est insérée après chaque AD_INTERVAL posts.
+   * Si aucune pub n'est disponible, on saute simplement l'emplacement.
+   */
+  const feedItems: Array<
+    | { type: "post"; data: Post; index: number }
+    | { type: "ad"; position: number }
+  > = [];
+
+  posts.forEach((post, index) => {
+    feedItems.push({ type: "post", data: post, index });
+    // Injecter une pub après le AD_INTERVAL-ième post (et ses multiples)
+    if ((index + 1) % AD_INTERVAL === 0 && currentAd) {
+      feedItems.push({ type: "ad", position: index + 1 });
+    }
+  });
+
   return (
     <div className="w-full space-y-6">
       <PostComposer user={user} onPostCreated={handlePostCreated} />
       <StoryCarousel user={user} />
 
-      {/* ✨ Toggle Feed Intelligent */}
+      {/* Toggle Feed Intelligent */}
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {isSmartActive
@@ -272,7 +322,7 @@ export default function MainFeed({ user }: MainFeedProps) {
         </button>
       </div>
 
-      {/* Liste des posts */}
+      {/* Feed avec pubs intercalées */}
       <div className="space-y-4">
         {posts.length === 0 ? (
           <div className="text-center py-10">
@@ -284,15 +334,31 @@ export default function MainFeed({ user }: MainFeedProps) {
             </p>
           </div>
         ) : (
-          posts.map((post) => (
-            <TrackedPostCard
-              key={post.id}
-              post={post}
-              currentUserId={user.id}
-              onPostUpdate={handlePostUpdate}
-              onPostDelete={() => handlePostDelete(post.id)}
-            />
-          ))
+          feedItems.map((item) => {
+            if (item.type === "post") {
+              return (
+                <TrackedPostCard
+                  key={item.data.id}
+                  post={item.data}
+                  currentUserId={user.id}
+                  onPostUpdate={handlePostUpdate}
+                  onPostDelete={() => handlePostDelete(item.data.id)}
+                />
+              );
+            }
+
+            // Emplacement publicitaire
+            return (
+              <AdCard
+                key={`ad-${item.position}`}
+                campaignId={currentAd!.campaignId}
+                creative={currentAd!.creative}
+                objective={currentAd!.objective}
+                billingModel={currentAd!.billingModel}
+                feedPosition={item.position}
+              />
+            );
+          })
         )}
       </div>
 
