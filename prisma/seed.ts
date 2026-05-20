@@ -22,7 +22,7 @@ const prisma = new PrismaClient({ adapter });
  * 2. Grandes villes internationales (population estimée)
  * 3. Villes africaines importantes
  *
- * Estimation : ~200 pays + ~500-1000 villes / Léger pour Supabase Free
+ * Estimation : ~200 pays + ~500-1000 villes 
  */
 
 // Liste des pays francophones prioritaires (codes ISO)
@@ -1902,6 +1902,61 @@ export async function seedWalletData(prisma: any) {
   console.log("🎉 Wallet data seeding complete!");
 }
 
+async function seedBoostPacks() {
+  console.log("🚀 Seeding Boost Packs...");
+
+  const packs = [
+    {
+      code: "boost_1h",
+      name: "Boost 1h",
+      description: "Votre profil apparaît en priorité pendant 1 heure",
+      durationMinutes: 60,
+      lgemsPrice: 30,
+      isActive: true,
+      isFeatured: false,
+      order: 1,
+    },
+    {
+      code: "boost_6h",
+      name: "Boost 6h",
+      description: "Votre profil apparaît en priorité pendant 6 heures",
+      durationMinutes: 360,
+      lgemsPrice: 100,
+      isActive: true,
+      isFeatured: true, // "Recommandé"
+      order: 2,
+    },
+    {
+      code: "boost_24h",
+      name: "Boost 24h",
+      description: "Votre profil apparaît en priorité pendant 24 heures",
+      durationMinutes: 1440,
+      lgemsPrice: 300,
+      isActive: true,
+      isFeatured: false,
+      order: 3,
+    },
+  ];
+
+  for (const pack of packs) {
+    await prisma.boostPack.upsert({
+      where: { code: pack.code },
+      update: {
+        name: pack.name,
+        description: pack.description,
+        durationMinutes: pack.durationMinutes,
+        lgemsPrice: pack.lgemsPrice,
+        isActive: pack.isActive,
+        isFeatured: pack.isFeatured,
+        order: pack.order,
+      },
+      create: pack,
+    });
+  }
+
+  console.log(`✅ ${packs.length} boost packs seeded`);
+}
+
 // Post Categories Seeding
 
 const postCategories = [
@@ -2577,6 +2632,7 @@ async function main() {
   await seedInterests(); // 8️⃣ Centres d'intérêt
   await seedReactions(); // 9️⃣ Réactions
   await seedWalletData(prisma); // 10️⃣ Wallet & cadeaux
+  await seedBoostPacks(); // 1️⃣0️⃣ ex æquo
   await seedPostCategories(); // 11 Smart Feed
   await seedTestUsers(); // 12️⃣ Utilisateurs de test
   await seedTestPosts(); // 13️⃣ Posts de test

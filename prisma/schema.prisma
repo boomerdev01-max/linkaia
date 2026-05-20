@@ -154,6 +154,11 @@ model User {
   reviewsGiven      Review[] @relation("ReviewsGiven")
   reviewsReceived   Review[] @relation("ReviewsReceived")
 
+  adCampaigns        AdCampaign[]   @relation("CampaignsCreated")
+  adImpressions      AdImpression[] @relation("AdImpressions")
+  adClicks           AdClick[]      @relation("AdClicks")
+  adTargetedProfiles AdCreative[]   @relation("AdTargetProfile")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -163,6 +168,7 @@ model User {
   userEvents UserEvent[]
   contentAffinities UserContentAffinity[]
   prestigeInviteCodes PrestigeInviteCode[] @relation("GeneratedPrestigeCodes")
+  profileBoosts ProfileBoost[]
 }
 
 // ============================================
@@ -2173,4 +2179,250 @@ model PrestigeInviteCode {
   @@index([expiresAt])
   @@index([generatedById])
   @@map("prestige_invite_codes")
+}
+
+
+// ============================================================
+// SYSTÈME PUBLICITAIRE — À AJOUTER À LA FIN DE schema.prisma
+// ============================================================
+
+// Statut d'une campagne
+// "draft"    → en cours de création, non soumise
+// "pending"  → soumise, en attente de validation admin
+// "active"   → validée et diffusée
+// "paused"   → mise en pause par l'annonceur
+// "ended"    → terminée (date de fin atteinte ou budget épuisé)
+// "rejected" → refusée par un admin
+
+model AdCampaign {
+  id          String   @id @default(uuid())
+
+  // Annonceur — peut être une org vérifiée OU un user individuel VIP/PLATINUM
+  advertiserId String  @map("advertiser_id")
+  advertiser   User    @relation("CampaignsCreated", fields: [advertiserId], references: [id], onDelete: Cascade)
+
+  // Identité de la campagne
+  name        String
+  objective   String  // "profile_visit" | "external_url"
+
+  // Modèle de facturation
+  billingModel String  @map("billing_model") // "CPM" | "CPC"
+  cpmRate      Float   @default(0.5) @map("cpm_rate")  // € pour 1000 impressions
+  cpcRate      Float   @default(0.1) @map("cpc_rate")  // € par clic
+
+  // Budget
+  totalBudget      Float  @map("total_budget")       // Budget total en €
+  dailyBudgetCap   Float? @map("daily_budget_cap")   // Plafond journalier optionnel
+  amountSpent      Float  @default(0) @map("amount_spent") // Dépensé à ce jour
+
+  // Stripe — Payment Intent du rechargement initial
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id")
+
+  // Planification
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+
+  // Statut
+  status      String    @default("draft") // voir commentaire ci-dessus
+  rejectedReason String? @map("rejected_reason") @db.Text
+
+  // Validation admin
+  reviewedBy  String?   @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+
+  // Statistiques agrégées (mis à jour par les webhooks/cron)
+  totalImpressions Int @default(0) @map("total_impressions")
+  totalClicks      Int @default(0) @map("total_clicks")
+  ctr              Float @default(0) // Click-Through Rate = clicks / impressions
+
+  // Relations
+  creative    AdCreative?
+  targeting   AdTargeting?
+  impressions AdImpression[]
+  clicks      AdClick[]
+  creditTransactions AdCreditTransaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@index([advertiserId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("ad_campaigns")
+}
+
+model AdCreative {
+  id         String     @id @default(uuid())
+  campaignId String     @unique @map("campaign_id")
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // Contenu de l'annonce
+  title       String           // Titre accrocheur (max 60 chars)
+  body        String   @db.Text // Texte descriptif (max 150 chars)
+  imageUrl    String?  @map("image_url")   // URL Supabase Storage (optionnel)
+  ctaLabel    String   @map("cta_label")  // Ex: "En savoir plus", "Voir le profil"
+  ctaUrl      String?  @map("cta_url")    // URL externe (si objective = external_url)
+
+  // Pour les campagnes "profile_visit" — pointer vers un profil interne
+  targetProfileId String? @map("target_profile_id")
+  targetProfile   User?   @relation("AdTargetProfile", fields: [targetProfileId], references: [id], onDelete: SetNull)
+
+  // Badge "Sponsorisé" toujours affiché, pas de champ nécessaire
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("ad_creatives")
+}
+
+model AdTargeting {
+  id         String     @id @default(uuid())
+  campaignId String     @unique @map("campaign_id")
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // Ciblage par intérêts (codes des intérêts, ex: ["voyage", "cuisine"])
+  interestCodes  String[] @map("interest_codes")
+
+  // Ciblage géographique (codes ISO pays, ex: ["BJ", "FR", "SN"])
+  countryCodes   String[] @map("country_codes")
+
+  // Ciblage démographique
+  ageMin         Int?     @map("age_min")
+  ageMax         Int?     @map("age_max")
+
+  // Ciblage par genre ("man" | "woman" | "non-binary" | null = tous)
+  genders        String[] // tableau vide = tous les genres
+
+  // Ciblage par niveau d'éducation (codes, ex: ["bachelor", "master"])
+  educationLevelCodes String[] @map("education_level_codes")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("ad_targetings")
+}
+
+model AdImpression {
+  id         String     @id @default(uuid())
+  campaignId String     @map("campaign_id")
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // User qui a vu la pub (null si non connecté — impossible sur Linkaïa mais prévu)
+  viewerId   String     @map("viewer_id")
+  viewer     User       @relation("AdImpressions", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  // Coût débité pour cette impression (snapshot au moment de l'affichage)
+  costEur    Float      @default(0) @map("cost_eur")
+
+  // Contexte
+  feedPosition Int?     @map("feed_position") // Position dans le feed (0-based)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Un user ne peut avoir qu'une impression par campagne par session (tolérance 1h)
+  // On gère côté API avec un cooldown plutôt qu'une contrainte DB
+  @@index([campaignId, createdAt])
+  @@index([viewerId])
+  @@index([createdAt])
+  @@map("ad_impressions")
+}
+
+model AdClick {
+  id         String     @id @default(uuid())
+  campaignId String     @map("campaign_id")
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  clickerId  String     @map("clicker_id")
+  clicker    User       @relation("AdClicks", fields: [clickerId], references: [id], onDelete: Cascade)
+
+  // Coût débité pour ce clic
+  costEur    Float      @default(0) @map("cost_eur")
+
+  // Destination réelle cliquée
+  destination String    // URL ou "/user/[id]"
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([campaignId])
+  @@index([clickerId])
+  @@index([createdAt])
+  @@map("ad_clicks")
+}
+
+model AdCreditTransaction {
+  id         String     @id @default(uuid())
+  campaignId String     @map("campaign_id")
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // "topup"      → rechargement du budget via Stripe
+  // "impression" → débit pour une impression (CPM)
+  // "click"      → débit pour un clic (CPC)
+  // "refund"     → remboursement solde résiduel si campagne annulée
+  type       String
+
+  amountEur  Float      @map("amount_eur") // positif = crédit, négatif = débit
+
+  // Solde après transaction (snapshot pour audit)
+  balanceBefore Float   @map("balance_before")
+  balanceAfter  Float   @map("balance_after")
+
+  stripePaymentIntentId String? @map("stripe_payment_intent_id")
+
+  referenceId   String? @map("reference_id")   // impressionId ou clickId
+  referenceType String? @map("reference_type") // "impression" | "click"
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([campaignId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("ad_credit_transactions")
+}
+
+model BoostPack {
+  id          String   @id @default(uuid())
+  code        String   @unique // "boost_1h" | "boost_6h" | "boost_24h"
+
+  name        String   // "Boost 1h", "Boost 6h", "Boost 24h"
+  description String?
+
+  durationMinutes Int  @map("duration_minutes") // 60 | 360 | 1440
+  lgemsPrice      Int  @map("lgems_price")      // prix en L-Gems
+
+  isActive    Boolean  @default(true) @map("is_active")
+  isFeatured  Boolean  @default(false) @map("is_featured") // badge "Recommandé"
+  order       Int      @default(0)
+
+  boosts      ProfileBoost[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  @@map("boost_packs")
+}
+
+// Boost actif ou historique pour un profil donné
+model ProfileBoost {
+  id     String @id @default(uuid())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  packId String    @map("pack_id")
+  pack   BoostPack @relation(fields: [packId], references: [id], onDelete: Restrict)
+
+  lgemsPaid Int      @map("lgems_paid") // snapshot du prix payé
+
+  activatedAt DateTime @default(now()) @map("activated_at")
+  expiresAt   DateTime @map("expires_at")
+
+  // "active" | "expired" | "cancelled"
+  status      String   @default("active")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@index([status])
+  @@map("profile_boosts")
 }
