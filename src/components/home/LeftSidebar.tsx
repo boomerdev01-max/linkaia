@@ -44,7 +44,8 @@ export default function LeftSidebar({ user }: LeftSidebarProps) {
     { icon: Home, label: "Accueil", path: "/home", active: true },
     { icon: Users, label: "Rencontres", path: "/suggestions" },
     { icon: Heart, label: "Favoris", path: "/favorites" },
-    { icon: Radio, label: "Lives", path: "/lives" }, // ← NOUVEAU
+    { icon: Radio, label: "Lives", path: "/lives" }, 
+    { icon: Radio, label: "Publicités", path: "/ads" }, 
     { icon: PlayCircle, label: "Vidéos", path: "/videos" },
     { icon: Calendar, label: "Événements", path: "/events" },
     { icon: Store, label: "Marketplace", path: "/marketplace" },
